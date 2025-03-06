@@ -1,0 +1,65 @@
+<header class="header">
+  <div class="header-container">
+    <div class="logo">
+      <a routerLink="/">
+        <span class="logo-text">GitBitex</span>
+      </a>
+    </div>
+    
+    <nav class="main-nav">
+      <ul class="nav-links">
+        <li><a routerLink="/trading" routerLinkActive="active">Trading</a></li>
+        <li><a routerLink="/markets" routerLinkActive="active">Markets</a></li>
+        <li><a routerLink="/about" routerLinkActive="active">About</a></li>
+      </ul>
+    </nav>
+    
+    <div class="auth-section">
+      @if (currentUser$ | async; as user) {
+        <div class="user-menu">
+          <button class="user-button" (click)="toggleMenu()">
+            {{ user.username }}
+            <span class="arrow-down">▼</span>
+          </button>
+          @if (isMenuOpen) {
+            <div class="dropdown-menu">
+              <a routerLink="/account/profile">Profile</a>
+              <a routerLink="/account/wallet">Wallet</a>
+              <a routerLink="/account/orders">Orders</a>
+              <a (click)="logout()" class="logout-link">Logout</a>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="auth-buttons">
+          <a routerLink="/auth/login" class="login-btn">Login</a>
+          <a routerLink="/auth/signup" class="signup-btn">Sign Up</a>
+        </div>
+      }
+    </div>
+    
+    <button class="mobile-menu-btn" (click)="toggleMenu()">
+      <span class="menu-icon">☰</span>
+    </button>
+  </div>
+  
+  @if (isMenuOpen) {
+    <div class="mobile-menu">
+      <ul class="mobile-nav-links">
+        <li><a routerLink="/trading" routerLinkActive="active">Trading</a></li>
+        <li><a routerLink="/markets" routerLinkActive="active">Markets</a></li>
+        <li><a routerLink="/about" routerLinkActive="active">About</a></li>
+        
+        @if (!(currentUser$ | async)) {
+          <li><a routerLink="/auth/login">Login</a></li>
+          <li><a routerLink="/auth/signup">Sign Up</a></li>
+        } @else {
+          <li><a routerLink="/account/profile">Profile</a></li>
+          <li><a routerLink="/account/wallet">Wallet</a></li>
+          <li><a routerLink="/account/orders">Orders</a></li>
+          <li><a (click)="logout()" class="logout-link">Logout</a></li>
+        }
+      </ul>
+    </div>
+  }
+</header>

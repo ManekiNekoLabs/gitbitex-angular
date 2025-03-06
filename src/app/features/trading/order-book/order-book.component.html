@@ -1,0 +1,69 @@
+<div class="order-book-container">
+  <div class="order-book-header">
+    <h3>Order Book</h3>
+    <div class="price-info">
+      <span class="current-price" [ngClass]="{'price-up': isPriceUp, 'price-down': !isPriceUp}">
+        {{ currentPrice | number:'1.2-2' }}
+      </span>
+      <span class="price-change" [ngClass]="{'positive': priceChangePercent >= 0, 'negative': priceChangePercent < 0}">
+        {{ priceChangePercent >= 0 ? '+' : '' }}{{ priceChangePercent | number:'1.2-2' }}%
+      </span>
+    </div>
+  </div>
+  
+  <div class="order-book-content">
+    <!-- Sell Orders (Asks) -->
+    <div class="order-list sell-orders">
+      <div class="order-header">
+        <span>Price</span>
+        <span>Size</span>
+        <span>Total</span>
+      </div>
+      <div class="order-list-content">
+        <ng-container *ngIf="sellOrders.length > 0; else noSellOrders">
+          <div class="order-row" *ngFor="let order of sellOrders.slice(0, 10)">
+            <span class="price sell-price">{{ order.price | number:'1.2-2' }}</span>
+            <span class="size">{{ order.size | number:'1.4-4' }}</span>
+            <span class="total">{{ order.size * order.price | number:'1.2-2' }}</span>
+            <div class="depth-visualization" 
+                 [style.width.%]="(order.size / getMaxSize(sellOrders)) * 100"
+                 [style.opacity]="0.2 + (order.size / getMaxSize(sellOrders)) * 0.8"></div>
+          </div>
+        </ng-container>
+        <ng-template #noSellOrders>
+          <div class="no-orders">No sell orders available</div>
+        </ng-template>
+      </div>
+    </div>
+    
+    <!-- Spread -->
+    <div class="spread-info" *ngIf="sellOrders.length > 0 && buyOrders.length > 0">
+      <span>Spread: {{ (sellOrders[0].price - buyOrders[0].price) | number:'1.2-2' }} 
+        ({{ ((sellOrders[0].price - buyOrders[0].price) / sellOrders[0].price * 100) | number:'1.2-2' }}%)</span>
+    </div>
+    
+    <!-- Buy Orders (Bids) -->
+    <div class="order-list buy-orders">
+      <div class="order-header">
+        <span>Price</span>
+        <span>Size</span>
+        <span>Total</span>
+      </div>
+      <div class="order-list-content">
+        <ng-container *ngIf="buyOrders.length > 0; else noBuyOrders">
+          <div class="order-row" *ngFor="let order of buyOrders.slice(0, 10)">
+            <span class="price buy-price">{{ order.price | number:'1.2-2' }}</span>
+            <span class="size">{{ order.size | number:'1.4-4' }}</span>
+            <span class="total">{{ order.size * order.price | number:'1.2-2' }}</span>
+            <div class="depth-visualization" 
+                 [style.width.%]="(order.size / getMaxSize(buyOrders)) * 100"
+                 [style.opacity]="0.2 + (order.size / getMaxSize(buyOrders)) * 0.8"></div>
+          </div>
+        </ng-container>
+        <ng-template #noBuyOrders>
+          <div class="no-orders">No buy orders available</div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>

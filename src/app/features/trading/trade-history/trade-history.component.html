@@ -1,0 +1,42 @@
+<div class="trade-history-container">
+  <div class="trade-history-header">
+    <h3>Trade History</h3>
+  </div>
+  
+  <div class="trade-history-content">
+    <!-- Loading state -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="spinner"></div>
+      <p>Loading trades...</p>
+    </div>
+    
+    <!-- Error state -->
+    <div class="error-container" *ngIf="error">
+      <p>{{ error }}</p>
+      <button (click)="loadTrades()">Retry</button>
+    </div>
+    
+    <!-- Trade list -->
+    <div class="trade-list" *ngIf="!isLoading && !error">
+      <div class="trade-header">
+        <span>Price</span>
+        <span>Size</span>
+        <span>Time</span>
+      </div>
+      
+      <div class="trade-list-content">
+        <ng-container *ngIf="trades.length > 0; else noTrades">
+          <div class="trade-row" *ngFor="let trade of trades" [ngClass]="trade.side">
+            <span class="price">{{ trade.price | number:'1.2-2' }}</span>
+            <span class="size">{{ trade.size | number:'1.6-6' }}</span>
+            <span class="time">{{ trade.time | date:'HH:mm:ss' }}</span>
+          </div>
+        </ng-container>
+        
+        <ng-template #noTrades>
+          <div class="no-trades">No trades available</div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>

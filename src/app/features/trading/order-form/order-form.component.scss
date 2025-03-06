@@ -1,0 +1,326 @@
+@use "sass:color";
+
+.order-form {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: transparent;
+  color: #fff;
+
+  // Custom scrollbar styles - hidden for order form
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  .tabs {
+    display: flex;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      color: #8f9bad;
+      position: relative;
+      
+      &.active {
+        color: #fff;
+        
+        &:after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background-color: #3498db;
+        }
+      }
+      
+      &:hover:not(.active) {
+        color: #fff;
+      }
+    }
+  }
+
+  .form-content {
+    flex: 1;
+    overflow: hidden;
+    padding: 0 15px;
+    
+    // Hide scrollbar completely
+    -ms-overflow-style: none;  // IE and Edge
+    scrollbar-width: none;     // Firefox
+    
+    // Hide scrollbar for Chrome, Safari and Opera
+    &::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 15px;
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #8f9bad;
+      font-size: 12px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px 12px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 14px;
+      
+      &:focus {
+        outline: none;
+        border-color: #3498db;
+      }
+    }
+  }
+
+  .price-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+
+    button {
+      flex: 1;
+      padding: 6px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      color: #8f9bad;
+      font-size: 12px;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+
+  .submit-button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    
+    &.buy {
+      background-color: #0ecb81;
+      color: #fff;
+      
+      &:hover {
+        background-color: color.adjust(#0ecb81, $lightness: -5%);
+      }
+    }
+    
+    &.sell {
+      background-color: #f6465d;
+      color: #fff;
+      
+      &:hover {
+        background-color: color.adjust(#f6465d, $lightness: -5%);
+      }
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.order-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #3a3f48;
+  
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+.order-type-tabs {
+  display: flex;
+  margin-bottom: 15px;
+  
+  .tab-button {
+    flex: 1;
+    padding: 8px 0;
+    background-color: #2b2f36;
+    border: 1px solid #3a3f48;
+    color: #a1a5b0;
+    font-size: 14px;
+    cursor: pointer;
+    
+    &:first-child {
+      border-radius: 4px 0 0 4px;
+    }
+    
+    &:last-child {
+      border-radius: 0 4px 4px 0;
+    }
+    
+    &.active {
+      background-color: rgba(240, 185, 11, 0.1);
+      border-color: #f0b90b;
+      color: #f0b90b;
+    }
+  }
+}
+
+.order-side-buttons {
+  display: flex;
+  margin-bottom: 20px;
+  
+  .side-button {
+    flex: 1;
+    padding: 10px 0;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    
+    &.buy {
+      background-color: rgba(14, 203, 129, 0.1);
+      color: #0ecb81;
+      border-radius: 4px 0 0 4px;
+      
+      &.active {
+        background-color: #0ecb81;
+        color: #fff;
+      }
+    }
+    
+    &.sell {
+      background-color: rgba(246, 70, 93, 0.1);
+      color: #f6465d;
+      border-radius: 0 4px 4px 0;
+      
+      &.active {
+        background-color: #f6465d;
+        color: #fff;
+      }
+    }
+  }
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  
+  label {
+    font-size: 12px;
+    color: #a1a5b0;
+    margin-bottom: 5px;
+  }
+  
+  input {
+    padding: 10px;
+    background-color: #2b2f36;
+    border: 1px solid #3a3f48;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 14px;
+    
+    &:focus {
+      outline: none;
+      border-color: #f0b90b;
+    }
+    
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+  
+  .input-with-button {
+    display: flex;
+    
+    input {
+      flex: 1;
+      border-radius: 4px 0 0 4px;
+    }
+    
+    .max-button {
+      padding: 0 10px;
+      background-color: #3a3f48;
+      border: 1px solid #3a3f48;
+      border-left: none;
+      border-radius: 0 4px 4px 0;
+      color: #f0b90b;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: #4a4f58;
+      }
+    }
+  }
+  
+  .balance-info {
+    font-size: 12px;
+    color: #a1a5b0;
+    margin-top: 5px;
+    text-align: right;
+  }
+}
+
+.submit-button {
+  padding: 12px 0;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  
+  &.buy {
+    background-color: #0ecb81;
+    color: #fff;
+    
+    &:hover {
+      background-color: #0bb974;
+    }
+  }
+  
+  &.sell {
+    background-color: #f6465d;
+    color: #fff;
+    
+    &:hover {
+      background-color: #e03e53;
+    }
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

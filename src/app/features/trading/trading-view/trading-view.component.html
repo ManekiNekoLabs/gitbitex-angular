@@ -1,0 +1,78 @@
+<div class="trading-container">
+  <!-- Loading state -->
+  <div class="loading-container" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading trading view...</p>
+  </div>
+
+  <!-- Error state -->
+  <div class="error-container" *ngIf="error">
+    <div class="error-icon">⚠️</div>
+    <p>Error loading trading data. Please try again later.</p>
+    <button (click)="retryConnection()">Retry</button>
+  </div>
+
+  <!-- Connection status -->
+  <div class="connection-status" *ngIf="!loading && !error">
+    <div class="status-item">
+      <span>Backend: </span>
+      <span class="status-indicator" [ngClass]="{'connected': backendStatus === 'available', 'disconnected': backendStatus === 'unavailable'}">
+        {{ backendStatus === 'available' ? 'Connected' : backendStatus === 'unavailable' ? 'Disconnected' : 'Checking...' }}
+      </span>
+      <button *ngIf="backendStatus === 'unavailable'" (click)="checkBackendHealth()">Retry</button>
+    </div>
+    <div class="status-item">
+      <span>WebSocket: </span>
+      <span class="status-indicator" [ngClass]="{'connected': wsConnected, 'disconnected': !wsConnected}">
+        {{ wsConnected ? 'Connected' : 'Disconnected' }}
+      </span>
+      <button *ngIf="!wsConnected" (click)="reconnectWebSocket()">Reconnect</button>
+    </div>
+    <div class="status-item" *ngIf="usingMockData">
+      <span class="mock-data-indicator">Using Mock Data</span>
+    </div>
+  </div>
+
+  <!-- Product selector -->
+  <div class="product-selector" *ngIf="!loading && !error">
+    <div class="selector">
+      <label for="product-select">Select Product:</label>
+      <select id="product-select" (change)="onProductSelect($event)">
+        <option *ngFor="let product of products" [value]="product.id" [selected]="product.id === selectedProduct?.id">
+          {{ product.baseCurrency }}/{{ product.quoteCurrency }}
+        </option>
+      </select>
+    </div>
+    <div class="product-info" *ngIf="selectedProduct">
+      <div class="price">
+        <span>Price:</span>
+        <span class="value">{{ 50000 | number:'1.2-2' }} USD</span>
+      </div>
+      <div class="volume">
+        <span>24h Volume:</span>
+        <span class="value">{{ 1250 | number:'1.2-2' }} {{ selectedProduct.baseCurrency }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main trading view -->
+  <div class="trading-view" *ngIf="!loading && !error && selectedProduct">
+    <div class="chart-container" appResizable [resizableMinWidth]="300">
+      <div class="chart-placeholder">
+        <p>TradingView Chart will be integrated here</p>
+      </div>
+    </div>
+    
+    <div class="order-book-container" appResizable [resizableMinWidth]="180">
+      <app-order-book [productId]="selectedProduct.id"></app-order-book>
+    </div>
+    
+    <div class="trade-history-container" appResizable [resizableMinWidth]="180">
+      <app-trade-history [productId]="selectedProduct.id"></app-trade-history>
+    </div>
+    
+    <div class="order-form-container">
+      <app-order-form [productId]="selectedProduct.id"></app-order-form>
+    </div>
+  </div>
+</div>

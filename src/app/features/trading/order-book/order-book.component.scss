@@ -1,0 +1,246 @@
+.order-book-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: transparent;
+  border-radius: 0;
+  overflow: hidden;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.order-book-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #2a2e37;
+  
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .price-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    
+    .current-price {
+      font-size: 1.1rem;
+      font-weight: 600;
+      
+      &.price-up {
+        color: #00c582;
+      }
+      
+      &.price-down {
+        color: #ff5b5b;
+      }
+    }
+    
+    .price-change {
+      font-size: 0.8rem;
+      
+      &.positive {
+        color: #00c582;
+      }
+      
+      &.negative {
+        color: #ff5b5b;
+      }
+    }
+  }
+}
+
+.order-book-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.order-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  
+  .order-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 8px 15px;
+    font-size: 0.8rem;
+    color: #9ba3af;
+    background-color: #262a33;
+    
+    span {
+      text-align: right;
+      
+      &:first-child {
+        text-align: left;
+      }
+    }
+  }
+  
+  .order-list-content {
+    flex: 1;
+    overflow-y: auto;
+    
+    .order-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      padding: 4px 15px;
+      position: relative;
+      cursor: pointer;
+      
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+      }
+      
+      span {
+        position: relative;
+        z-index: 1;
+        text-align: right;
+        
+        &:first-child {
+          text-align: left;
+        }
+      }
+      
+      .depth-visualization {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        z-index: 0;
+      }
+    }
+  }
+}
+
+.sell-orders {
+  .order-row .depth-visualization {
+    background-color: rgba(255, 91, 91, 0.2);
+  }
+  
+  .sell-price {
+    color: #ff5b5b;
+  }
+}
+
+.buy-orders {
+  .order-row .depth-visualization {
+    background-color: rgba(0, 197, 130, 0.2);
+  }
+  
+  .buy-price {
+    color: #00c582;
+  }
+}
+
+.spread-info {
+  padding: 8px 15px;
+  text-align: center;
+  background-color: #262a33;
+  color: #9ba3af;
+  font-size: 0.8rem;
+  border-top: 1px solid #2a2e37;
+  border-bottom: 1px solid #2a2e37;
+}
+
+.no-orders {
+  padding: 15px;
+  text-align: center;
+  color: #9ba3af;
+  font-style: italic;
+}
+
+.order-book {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 500;
+    color: #8f9bad;
+  }
+
+  .orders-container {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    
+    // Hide scrollbar while allowing scrolling
+    -ms-overflow-style: none;  // IE and Edge
+    scrollbar-width: none;     // Firefox
+    
+    // Hide scrollbar for Chrome, Safari and Opera
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .asks, .bids {
+    position: relative;
+  }
+
+  .order-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    cursor: pointer;
+    position: relative;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  .ask {
+    color: #f6465d;
+  }
+
+  .bid {
+    color: #0ecb81;
+  }
+
+  .price {
+    flex: 1;
+  }
+
+  .amount {
+    flex: 1;
+    text-align: right;
+  }
+
+  .total {
+    flex: 1;
+    text-align: right;
+  }
+
+  .depth-visualization {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    opacity: 0.1;
+    
+    &.ask {
+      background-color: #f6465d;
+    }
+    
+    &.bid {
+      background-color: #0ecb81;
+    }
+  }
+}
