@@ -28,12 +28,19 @@
       </span>
       <button *ngIf="!wsConnected" (click)="reconnectWebSocket()">Reconnect</button>
     </div>
+    <div class="status-item" *ngIf="lastTickerUpdate">
+      <span>Last Ticker Update: </span>
+      <span class="status-indicator connected">{{ lastTickerUpdate | date:'HH:mm:ss' }}</span>
+    </div>
     <div class="status-item" *ngIf="usingMockData">
       <span class="mock-data-indicator">Using Mock Data</span>
     </div>
+    <div class="status-item">
+      <button (click)="setDebugTickerData()">Set Debug Data</button>
+    </div>
   </div>
 
-  <!-- Product selector -->
+  <!-- Product selector with enhanced ticker information -->
   <div class="product-selector" *ngIf="!loading && !error">
     <div class="selector">
       <label for="product-select">Select Product:</label>
@@ -43,36 +50,79 @@
         </option>
       </select>
     </div>
-    <div class="product-info" *ngIf="selectedProduct">
-      <div class="price">
-        <span>Price:</span>
-        <span class="value">{{ 50000 | number:'1.2-2' }} USD</span>
-      </div>
-      <div class="volume">
-        <span>24h Volume:</span>
-        <span class="value">{{ 1250 | number:'1.2-2' }} {{ selectedProduct.baseCurrency }}</span>
-      </div>
+    
+    <div class="ticker-info" *ngIf="selectedProduct">
+      <!-- Use async pipe to automatically subscribe to changes -->
+      <ng-container *ngIf="tickerData$ | async as tickerData">
+        <!-- Hidden timestamp to force updates -->
+        <span style="display: none;">{{ tickerData?._timestamp }}</span>
+        
+        <div class="ticker-item price">
+          <span class="label">Price:</span>
+          <span class="value" [ngClass]="{'positive': tickerData?.side === 'buy', 'negative': tickerData?.side === 'sell'}">
+            {{ (tickerData?.price | number:'1.2-8') || '0.00' }} {{ selectedProduct.quoteCurrency }}
+          </span>
+        </div>
+        
+        <div class="ticker-item change">
+          <span class="label">24h Change:</span>
+          <span class="value" [ngClass]="{'positive': getPercentChange() > 0, 'negative': getPercentChange() < 0}">
+            {{ getPercentChange().toFixed(2) }}%
+          </span>
+        </div>
+        
+        <div class="ticker-item high">
+          <span class="label">24h High:</span>
+          <span class="value">{{ (tickerData?.high24h | number:'1.2-8') || '0.00' }}</span>
+        </div>
+        
+        <div class="ticker-item low">
+          <span class="label">24h Low:</span>
+          <span class="value">{{ (tickerData?.low24h | number:'1.2-8') || '0.00' }}</span>
+        </div>
+        
+        <div class="ticker-item volume">
+          <span class="label">24h Volume:</span>
+          <span class="value">{{ formatVolume(tickerData?.volume24h) }} {{ selectedProduct.baseCurrency }}</span>
+        </div>
+      </ng-container>
+      
+      <!-- Fallback if no ticker data -->
+      <ng-container *ngIf="!(tickerData$ | async)">
+        <div class="ticker-item">
+          <span class="label">Status:</span>
+          <span class="value">Waiting for ticker data...</span>
+        </div>
+      </ng-container>
     </div>
   </div>
 
-  <!-- Main trading view -->
-  <div class="trading-view" *ngIf="!loading && !error && selectedProduct">
-    <div class="chart-container" appResizable [resizableMinWidth]="300">
-      <div class="chart-placeholder">
-        <p>TradingView Chart will be integrated here</p>
+  <!-- Main trading view with 7-5 grid layout -->
+  <div class="trading-grid" *ngIf="!loading && !error && selectedProduct">
+    <!-- Chart area (7/12 columns) -->
+    <div class="chart-area">
+      <div class="chart-container">
+        <div class="chart-placeholder">
+          <p>TradingView Chart will be integrated here</p>
+        </div>
       </div>
     </div>
     
-    <div class="order-book-container" appResizable [resizableMinWidth]="180">
-      <app-order-book [productId]="selectedProduct.id"></app-order-book>
-    </div>
-    
-    <div class="trade-history-container" appResizable [resizableMinWidth]="180">
-      <app-trade-history [productId]="selectedProduct.id"></app-trade-history>
-    </div>
-    
-    <div class="order-form-container">
-      <app-order-form [productId]="selectedProduct.id"></app-order-form>
+    <!-- Trading sidebar (5/12 columns) with horizontal layout -->
+    <div class="trading-sidebar">
+      <div class="sidebar-row">
+        <div class="order-book-container">
+          <app-order-book [productId]="selectedProduct.id"></app-order-book>
+        </div>
+        
+        <div class="trade-history-container">
+          <app-trade-history [productId]="selectedProduct.id"></app-trade-history>
+        </div>
+        
+        <div class="order-form-container">
+          <app-order-form [productId]="selectedProduct.id"></app-order-form>
+        </div>
+      </div>
     </div>
   </div>
 </div>

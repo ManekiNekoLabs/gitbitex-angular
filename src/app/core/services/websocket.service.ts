@@ -25,6 +25,7 @@ export class WebsocketService {
   private readonly RECONNECT_INTERVAL = 5000;
   private readonly MAX_RETRIES = 5;
   private connected$ = new BehaviorSubject<boolean>(false);
+  private backendAvailable$ = new BehaviorSubject<'available' | 'unavailable' | 'checking'>('checking');
   private messageSubject = new Subject<WebSocketMessage>();
   private subscriptions: { [channel: string]: Subject<any> } = {};
   private reconnectAttempts = 0;
@@ -63,6 +64,7 @@ export class WebsocketService {
     }
     
     console.log('Checking backend availability...');
+    this.backendAvailable$.next('checking');
     
     // Convert WebSocket URL to HTTP URL for health check
     const healthCheckUrl = `${environment.apiUrl}/products`;
@@ -71,19 +73,29 @@ export class WebsocketService {
     this.http.get(healthCheckUrl).pipe(
       catchError((error) => {
         console.error('Backend health check failed:', error);
+        this.backendAvailable$.next('unavailable');
         return of(null);
       })
     ).subscribe(response => {
       if (response) {
         console.log('Backend is available, initializing WebSocket');
+        this.backendAvailable$.next('available');
         this.useMockData = false;
         this.initializeWebSocket();
       } else {
         console.warn('Backend is not available, falling back to mock data');
+        this.backendAvailable$.next('unavailable');
         this.useMockData = true;
         this.initializeMockData();
       }
     });
+  }
+
+  /**
+   * Get an observable of the backend availability status
+   */
+  public isBackendAvailable(): Observable<'available' | 'unavailable' | 'checking'> {
+    return this.backendAvailable$.asObservable();
   }
 
   private initializeWebSocket(): void {

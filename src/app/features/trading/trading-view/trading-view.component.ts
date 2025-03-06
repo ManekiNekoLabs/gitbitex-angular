@@ -1,6 +1,6 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, Inject, PLATFORM_ID } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subscription, of } from 'rxjs';
+import { Component, OnDestroy, OnInit, AfterViewInit, Inject, PLATFORM_ID, HostListener, NgZone, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Observable, Subscription, of, BehaviorSubject } from 'rxjs';
 import { catchError, switchMap, tap, take } from 'rxjs/operators';
 import { Product } from '../../../core/models/product.model';
 import { ProductService } from '../../../core/services/product.service';
@@ -12,15 +12,46 @@ import { OrderBookComponent } from '../order-book/order-book.component';
 import { TradeHistoryComponent } from '../trade-history/trade-history.component';
 import { CommonModule } from '@angular/common';
 import { OrderFormComponent } from '../order-form/order-form.component';
-import { ResizableDirective } from '../../../shared/directives/resizable.directive';
 import { isPlatformBrowser } from '@angular/common';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+
+// Define the TickerData interface
+interface TickerData {
+  close24h: string;
+  high24h: string;
+  lastSize: string;
+  low24h: string;
+  open24h: string;
+  price: string;
+  productId: string;
+  sequence: number;
+  side: string;
+  time: string;
+  tradeId: number;
+  type: string;
+  volume24h: string;
+  volume30d: string;
+  _timestamp?: number; // Optional timestamp for change detection
+}
 
 @Component({
   selector: 'app-trading-view',
   standalone: true,
-  imports: [CommonModule, OrderBookComponent, TradeHistoryComponent, OrderFormComponent, ResizableDirective],
+  imports: [
+    CommonModule,
+    RouterModule,
+    MatGridListModule,
+    MatCardModule,
+    MatDividerModule,
+    OrderBookComponent,
+    TradeHistoryComponent,
+    OrderFormComponent
+  ],
   templateUrl: './trading-view.component.html',
-  styleUrl: './trading-view.component.scss'
+  styleUrl: './trading-view.component.scss',
+  changeDetection: ChangeDetectionStrategy.Default
 })
 export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
   products: Product[] = [];
@@ -31,10 +62,26 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
   connectionStatus: 'connected' | 'disconnected' | 'connecting' = 'connecting';
   backendStatus: 'available' | 'unavailable' | 'checking' = 'checking';
   wsConnected = false;
+  lastTickerUpdate: Date | null = null;
   
   private subscriptions: Subscription = new Subscription();
   private productSubscriptions: Set<string> = new Set();
   private componentSizesInitialized = false;
+  
+  isSmallScreen = false;
+  
+  // Use BehaviorSubject for ticker data
+  private tickerDataSubject = new BehaviorSubject<TickerData | null>(null);
+  tickerData$ = this.tickerDataSubject.asObservable();
+  
+  // Keep a reference to the current ticker data
+  get tickerData(): TickerData | null {
+    return this.tickerDataSubject.value;
+  }
+  
+  set tickerData(value: TickerData | null) {
+    this.tickerDataSubject.next(value);
+  }
 
   constructor(
     private productService: ProductService,
@@ -44,6 +91,8 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     private healthService: HealthService,
     private route: ActivatedRoute,
     private router: Router,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
@@ -51,12 +100,43 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     // Initialize WebSocket connection
     this.websocketService.checkBackendAvailability();
     
+    // Subscribe to backend availability status
+    this.subscriptions.add(
+      this.websocketService.isBackendAvailable().subscribe(status => {
+        console.log('Backend availability status:', status);
+        this.backendStatus = status;
+        this.cdr.markForCheck();
+      })
+    );
+    
     // Subscribe to WebSocket connection status
     this.subscriptions.add(
       this.websocketService.isConnected().subscribe(connected => {
         console.log('WebSocket connection status:', connected);
+        this.wsConnected = connected;
+        
         if (connected) {
+          // When connected, subscribe to feeds for the selected product
           this.subscribeToFeeds();
+          
+          // Also subscribe to ticker updates
+          this.subscribeToTickerUpdates();
+          
+          // Subscribe to all WebSocket messages for debugging
+          this.subscribeToAllMessages();
+          
+          // For debugging - set mock data after 3 seconds
+          if (isPlatformBrowser(this.platformId)) {
+            setTimeout(() => {
+              this.setDebugTickerData();
+              
+              // Start auto-refresh for testing
+              this.startAutoRefresh();
+            }, 3000);
+          }
+        } else {
+          // Reset ticker data when disconnected
+          this.tickerData = null;
         }
       })
     );
@@ -64,15 +144,10 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     // Load products
     this.loadProducts();
 
-    // Add event listener for window resize - only in browser environment
+    // Check screen size on init
     if (isPlatformBrowser(this.platformId)) {
-      window.addEventListener('resize', this.handleWindowResize.bind(this));
+      this.checkScreenSize();
     }
-    
-    // Initialize resizable components after view is initialized
-    setTimeout(() => {
-      this.initializeResizableComponents();
-    }, 500);
   }
 
   ngOnDestroy(): void {
@@ -87,21 +162,24 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Disconnect from WebSocket
     this.websocketService.disconnect();
-
-    // Remove event listener - only in browser environment
-    if (isPlatformBrowser(this.platformId)) {
-      window.removeEventListener('resize', this.handleWindowResize.bind(this));
+    
+    // Clear auto-refresh interval
+    if (this.autoRefreshInterval) {
+      clearInterval(this.autoRefreshInterval);
     }
   }
 
   ngAfterViewInit(): void {
-    // Only run in browser environment
-    if (isPlatformBrowser(this.platformId)) {
-      // Initialize the layout with proper proportions
-      setTimeout(() => {
-        this.initializeLayout();
-      }, 100);
-    }
+    // No need for the old layout initialization
+  }
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.checkScreenSize();
+  }
+  
+  private checkScreenSize() {
+    this.isSmallScreen = window.innerWidth < 1200;
   }
 
   private loadProducts(): void {
@@ -211,6 +289,12 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
       
       // Navigate to the product's trading page
       this.router.navigate(['/trading', product.id]);
+
+      // Reset ticker data when changing products
+      this.tickerData = null;
+      
+      // Log that we're changing products
+      console.log(`Selected product changed to ${product.id}, waiting for ticker data...`);
     }
   }
 
@@ -241,71 +325,54 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private subscribeToFeeds(): void {
-    if (!this.selectedProduct) {
-      console.warn('No product selected for subscription');
+    if (!this.selectedProduct) return;
+    
+    const productId = this.selectedProduct.id;
+    
+    // Check if we're already subscribed to this product
+    if (this.productSubscriptions.has(productId)) {
+      console.log(`Already subscribed to feeds for ${productId}`);
       return;
     }
-
-    console.log('Subscribing to product feed:', this.selectedProduct.id);
     
-    // Subscribe to product updates
-    this.subscriptions.add(
-      this.websocketService.subscribe(`product:${this.selectedProduct.id}`).subscribe({
-        next: (data) => {
-          console.log('Product update received:', data);
-          // Handle product updates
-        },
-        error: (error) => console.error('Product subscription error:', error)
-      })
-    );
+    console.log(`Subscribing to feeds for ${productId}`);
     
-    // Subscribe to match updates
-    this.subscriptions.add(
-      this.websocketService.subscribe(`match:${this.selectedProduct.id}`).subscribe({
-        next: (data) => {
-          console.log('Match update received:', data);
-          // Handle match updates
-        },
-        error: (error) => console.error('Match subscription error:', error)
-      })
-    );
+    // Subscribe to ticker channel for this product
+    this.websocketService.send({
+      type: 'subscribe',
+      product_ids: [productId],
+      channels: ['ticker']
+    });
     
-    // Add this product to the set of subscribed products
-    this.productSubscriptions.add(this.selectedProduct.id);
+    // Add to our set of subscribed products
+    this.productSubscriptions.add(productId);
   }
   
   private unsubscribeFromProductFeed(productId: string): void {
-    console.log(`Unsubscribing from product feed: ${productId}`);
-    this.websocketService.unsubscribe(`product:${productId}`);
-    this.websocketService.unsubscribe(`match:${productId}`);
+    if (!this.productSubscriptions.has(productId)) {
+      console.log(`Not subscribed to ${productId}, no need to unsubscribe`);
+      return;
+    }
+    
+    console.log(`Unsubscribing from feeds for ${productId}`);
+    
+    // Unsubscribe from ticker channel
+    this.websocketService.send({
+      type: 'unsubscribe',
+      product_ids: [productId],
+      channels: ['ticker']
+    });
+    
+    // Remove from our set of subscribed products
     this.productSubscriptions.delete(productId);
   }
 
   public checkBackendHealth(): void {
-    // Check if backend is available
-    this.productService.getProducts().pipe(
-      take(1),
-      catchError(error => {
-        console.error('Backend health check failed:', error);
-        this.error = true;
-        this.loading = false;
-        // Retry connection after a delay
-        this.retryConnection();
-        return of([]);
-      })
-    ).subscribe(products => {
-      if (products.length > 0) {
-        this.error = false;
-        this.loading = false;
-        // Initialize WebSocket connection
-        this.websocketService.checkBackendAvailability();
-      } else {
-        this.error = true;
-        this.loading = false;
-        // Retry connection after a delay
-        this.retryConnection();
-      }
-    });
+    // Set status to checking
+    this.backendStatus = 'checking';
+    
+    // Use the WebsocketService to check backend availability
+    this.websocketService.checkBackendAvailability();
   }
 
   private checkIfUsingMockData(): void {
@@ -347,90 +414,210 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private handleWindowResize(): void {
-    // Only run in browser environment
-    if (isPlatformBrowser(this.platformId)) {
-      // Adjust component sizes on window resize
-      this.adjustComponentSizes();
-    }
+    // Only check screen size now
+    this.checkScreenSize();
   }
 
   private initializeResizableComponents(): void {
-    // Only run in browser environment
-    if (!isPlatformBrowser(this.platformId)) return;
-
-    const tradingView = document.querySelector('.trading-view');
-    if (!tradingView) return;
-
-    const chartContainer = tradingView.querySelector('.chart-container');
-    const orderBookContainer = tradingView.querySelector('.order-book-container');
-    const tradeHistoryContainer = tradingView.querySelector('.trade-history-container');
-    const orderFormContainer = tradingView.querySelector('.order-form-container');
-
-    if (chartContainer && orderBookContainer && tradeHistoryContainer && orderFormContainer) {
-      this.adjustComponentSizes();
-    }
+    // No longer needed with the grid layout
   }
 
   private adjustComponentSizes(): void {
-    // Only run in browser environment
-    if (!isPlatformBrowser(this.platformId)) return;
-
-    const tradingView = document.querySelector('.trading-view');
-    if (!tradingView) return;
-
-    const totalWidth = tradingView.clientWidth;
-    
-    // Default proportions if not already set
-    if (!this.componentSizesInitialized) {
-      const chartContainer = tradingView.querySelector('.chart-container') as HTMLElement;
-      const orderBookContainer = tradingView.querySelector('.order-book-container') as HTMLElement;
-      const tradeHistoryContainer = tradingView.querySelector('.trade-history-container') as HTMLElement;
-      const orderFormContainer = tradingView.querySelector('.order-form-container') as HTMLElement;
-
-      if (chartContainer && orderBookContainer && tradeHistoryContainer && orderFormContainer) {
-        // Set chart to 50% of the width
-        chartContainer.style.width = `${totalWidth * 0.5}px`;
-        
-        // Distribute remaining 50% equally among the other three components
-        const remainingWidth = totalWidth * 0.5;
-        const componentWidth = remainingWidth / 3;
-        
-        orderBookContainer.style.width = `${componentWidth}px`;
-        tradeHistoryContainer.style.width = `${componentWidth}px`;
-        orderFormContainer.style.width = `${componentWidth}px`;
-        
-        this.componentSizesInitialized = true;
-      }
-    }
+    // No longer needed with the grid layout
   }
 
   private initializeLayout(): void {
-    // Only run in browser environment
+    // No longer needed with the grid layout
+  }
+
+  private subscribeToTickerUpdates(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-
-    const tradingView = document.querySelector('.trading-view');
-    if (!tradingView) return;
-
-    const totalWidth = tradingView.clientWidth;
     
-    const chartContainer = tradingView.querySelector('.chart-container') as HTMLElement;
-    const orderBookContainer = tradingView.querySelector('.order-book-container') as HTMLElement;
-    const tradeHistoryContainer = tradingView.querySelector('.trade-history-container') as HTMLElement;
-    const orderFormContainer = tradingView.querySelector('.order-form-container') as HTMLElement;
+    console.log('Subscribing to ticker updates...');
+    
+    // Subscribe to ticker channel
+    this.subscriptions.add(
+      this.websocketService.subscribe('ticker').subscribe(
+        (data: any) => {
+          console.log('Received data from ticker channel:', data);
+          
+          if (data && data.type === 'ticker') {
+            console.log('📈 Ticker update:', data);
+            
+            // Only update if it matches our selected product
+            if (this.selectedProduct && data.productId === this.selectedProduct.id) {
+              console.log(`Ticker update matches selected product ${this.selectedProduct.id}`);
+              
+              // Use NgZone to ensure change detection runs
+              this.ngZone.run(() => {
+                console.log('Before update - tickerData:', this.tickerData);
+                
+                // Ensure volume data is properly formatted
+                if (data.volume24h) {
+                  console.log('Original volume24h:', data.volume24h);
+                  // Make sure volume is a string
+                  data.volume24h = data.volume24h.toString();
+                }
+                
+                // Create a new object to ensure change detection
+                const updatedData = {
+                  ...data,
+                  _timestamp: new Date().getTime() // Add timestamp to force update
+                };
+                
+                // Update the ticker data
+                this.tickerData = updatedData;
+                this.lastTickerUpdate = new Date();
+                
+                console.log('After update - tickerData:', this.tickerData);
+                
+                // Log the values to verify we're getting the data
+                console.log('Updated price from ticker:', data.price);
+                console.log('Updated 24h Change:', this.getPercentChange());
+                console.log('Updated 24h High:', data.high24h);
+                console.log('Updated 24h Low:', data.low24h);
+                console.log('Updated 24h Volume:', data.volume24h);
+                console.log('Formatted 24h Volume:', this.formatVolume(data.volume24h));
+                
+                // Explicitly trigger change detection
+                this.cdr.markForCheck();
+                this.cdr.detectChanges();
+              });
+            } else {
+              console.log('Ticker update does not match selected product or no product selected');
+              console.log('Selected product:', this.selectedProduct?.id);
+              console.log('Ticker product:', data.productId);
+            }
+          } else {
+            console.log('Received non-ticker data:', data);
+          }
+        },
+        error => {
+          console.error('Error subscribing to ticker:', error);
+        }
+      )
+    );
+  }
+  
+  // Calculate percent change between open24h and current price
+  getPercentChange(): number {
+    if (!this.tickerData || !this.tickerData.open24h || !this.tickerData.price) {
+      return 0;
+    }
+    
+    const open = parseFloat(this.tickerData.open24h);
+    const current = parseFloat(this.tickerData.price);
+    
+    if (open === 0) return 0;
+    
+    const percentChange = ((current - open) / open) * 100;
+    return parseFloat(percentChange.toFixed(2));
+  }
 
-    if (chartContainer && orderBookContainer && tradeHistoryContainer && orderFormContainer) {
-      // Set chart to 50% of the width
-      chartContainer.style.width = `${totalWidth * 0.5}px`;
+  // Format volume data for display
+  formatVolume(volume: string | undefined): string {
+    if (!volume) return '0.00';
+    
+    const volumeNum = parseFloat(volume);
+    
+    // Log the volume for debugging
+    console.log('Formatting volume:', volume, 'as number:', volumeNum);
+    
+    // Format based on size
+    if (volumeNum >= 1000000) {
+      return (volumeNum / 1000000).toFixed(2) + 'M';
+    } else if (volumeNum >= 1000) {
+      return (volumeNum / 1000).toFixed(2) + 'K';
+    } else {
+      return volumeNum.toFixed(2);
+    }
+  }
+
+  // Debug method to manually set ticker data
+  public setDebugTickerData(): void {
+    console.log('Setting debug ticker data');
+    
+    if (this.selectedProduct) {
+      // Generate a random volume between 10,000 and 100,000
+      const randomVolume = (Math.floor(Math.random() * 90000) + 10000).toString();
       
-      // Distribute remaining 50% equally among the other three components
-      const remainingWidth = totalWidth * 0.5;
-      const componentWidth = remainingWidth / 3;
+      const mockTickerData: TickerData = {
+        close24h: "6",
+        high24h: "9",
+        lastSize: "4",
+        low24h: "9",
+        open24h: "9",
+        price: Math.floor(Math.random() * 10).toString(), // Random price for testing updates
+        productId: this.selectedProduct.id,
+        sequence: 0,
+        side: Math.random() > 0.5 ? "buy" : "sell", // Randomly alternate buy/sell
+        time: new Date().toISOString(),
+        tradeId: 13852,
+        type: "ticker",
+        volume24h: randomVolume, // Random volume for testing
+        volume30d: (parseInt(randomVolume) * 30).toString(), // 30x the 24h volume for testing
+        _timestamp: new Date().getTime()
+      };
       
-      orderBookContainer.style.width = `${componentWidth}px`;
-      tradeHistoryContainer.style.width = `${componentWidth}px`;
-      orderFormContainer.style.width = `${componentWidth}px`;
+      this.ngZone.run(() => {
+        // Update the ticker data
+        this.tickerData = mockTickerData;
+        this.lastTickerUpdate = new Date();
+        
+        console.log('Debug ticker data set:', this.tickerData);
+        console.log('Random price set:', mockTickerData.price);
+        console.log('Random volume set:', mockTickerData.volume24h);
+        
+        // Explicitly trigger change detection
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
+  // Subscribe to all WebSocket messages for debugging
+  private subscribeToAllMessages(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
+    console.log('Subscribing to all WebSocket messages for debugging...');
+    
+    this.subscriptions.add(
+      this.websocketService.onMessage().subscribe(
+        (message: any) => {
+          console.log('WebSocket message received:', message);
+        },
+        error => {
+          console.error('Error subscribing to all messages:', error);
+        }
+      )
+    );
+  }
+
+  // Auto-refresh ticker data for testing
+  private autoRefreshInterval: any;
+  
+  private startAutoRefresh(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      console.log('Starting auto-refresh for testing...');
       
-      this.componentSizesInitialized = true;
+      // Clear any existing interval
+      if (this.autoRefreshInterval) {
+        clearInterval(this.autoRefreshInterval);
+      }
+      
+      // Set up new interval to refresh every 3 seconds
+      this.autoRefreshInterval = setInterval(() => {
+        this.setDebugTickerData();
+      }, 3000);
+      
+      // Add to subscriptions to ensure cleanup
+      this.subscriptions.add({
+        unsubscribe: () => {
+          if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+          }
+        }
+      });
     }
   }
 }

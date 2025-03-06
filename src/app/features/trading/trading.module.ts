@@ -2,6 +2,9 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
 
 import { TradingRoutingModule } from './trading-routing.module';
 import { SharedModule } from '../../shared/shared.module';
@@ -21,6 +24,9 @@ import { OrderFormComponent } from './order-form/order-form.component';
     ReactiveFormsModule,
     HttpClientModule,
     SharedModule,
+    MatGridListModule,
+    MatCardModule,
+    MatDividerModule,
     // Import standalone components
     TradingViewComponent,
     OrderBookComponent,
