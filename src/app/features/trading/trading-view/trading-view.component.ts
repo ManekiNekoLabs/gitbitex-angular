@@ -125,15 +125,6 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
           // Subscribe to all WebSocket messages for debugging
           this.subscribeToAllMessages();
           
-          // For debugging - set mock data after 3 seconds
-          if (isPlatformBrowser(this.platformId)) {
-            setTimeout(() => {
-              this.setDebugTickerData();
-              
-              // Start auto-refresh for testing
-              this.startAutoRefresh();
-            }, 3000);
-          }
         } else {
           // Reset ticker data when disconnected
           this.tickerData = null;
@@ -277,24 +268,26 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
 
   selectProduct(product: Product): void {
     if (product && product.id !== this.selectedProduct?.id) {
-      // Unsubscribe from current product
+      // Unsubscribe from current product's ticker
       if (this.selectedProduct) {
+        const currentTickerChannel = `ticker:${this.selectedProduct.id}`;
+        this.websocketService.unsubscribe(currentTickerChannel);
         this.unsubscribeFromProductFeed(this.selectedProduct.id);
       }
       
       this.selectedProduct = product;
       
-      // Subscribe to new product
-      this.subscribeToFeeds();
-      
-      // Navigate to the product's trading page
-      this.router.navigate(['/trading', product.id]);
-
       // Reset ticker data when changing products
       this.tickerData = null;
       
-      // Log that we're changing products
-      console.log(`Selected product changed to ${product.id}, waiting for ticker data...`);
+      // Subscribe to new product's feeds
+      this.subscribeToFeeds();
+      
+      // Subscribe to ticker updates for the new product
+      this.subscribeToTickerUpdates();
+      
+      // Navigate to the product's trading page
+      this.router.navigate(['/trading', product.id]);
     }
   }
 
@@ -346,6 +339,9 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Add to our set of subscribed products
     this.productSubscriptions.add(productId);
+    
+    // Subscribe to ticker updates
+    this.subscribeToTickerUpdates();
   }
   
   private unsubscribeFromProductFeed(productId: string): void {
@@ -435,62 +431,56 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     
     console.log('Subscribing to ticker updates...');
     
+    // Only subscribe if we have a selected product
+    if (!this.selectedProduct) {
+      console.log('No product selected, skipping ticker subscription');
+      return;
+    }
+    
+    const tickerChannel = `ticker:${this.selectedProduct.id}`;
+    console.log(`Subscribing to ticker channel: ${tickerChannel}`);
+    
     // Subscribe to ticker channel
     this.subscriptions.add(
-      this.websocketService.subscribe('ticker').subscribe(
+      this.websocketService.subscribe(tickerChannel).subscribe(
         (data: any) => {
           console.log('Received data from ticker channel:', data);
           
-          if (data && data.type === 'ticker') {
-            console.log('📈 Ticker update:', data);
+          // Use NgZone to ensure change detection runs
+          this.ngZone.run(() => {
+            console.log('Before update - tickerData:', this.tickerData);
             
-            // Only update if it matches our selected product
-            if (this.selectedProduct && data.productId === this.selectedProduct.id) {
-              console.log(`Ticker update matches selected product ${this.selectedProduct.id}`);
-              
-              // Use NgZone to ensure change detection runs
-              this.ngZone.run(() => {
-                console.log('Before update - tickerData:', this.tickerData);
-                
-                // Ensure volume data is properly formatted
-                if (data.volume24h) {
-                  console.log('Original volume24h:', data.volume24h);
-                  // Make sure volume is a string
-                  data.volume24h = data.volume24h.toString();
-                }
-                
-                // Create a new object to ensure change detection
-                const updatedData = {
-                  ...data,
-                  _timestamp: new Date().getTime() // Add timestamp to force update
-                };
-                
-                // Update the ticker data
-                this.tickerData = updatedData;
-                this.lastTickerUpdate = new Date();
-                
-                console.log('After update - tickerData:', this.tickerData);
-                
-                // Log the values to verify we're getting the data
-                console.log('Updated price from ticker:', data.price);
-                console.log('Updated 24h Change:', this.getPercentChange());
-                console.log('Updated 24h High:', data.high24h);
-                console.log('Updated 24h Low:', data.low24h);
-                console.log('Updated 24h Volume:', data.volume24h);
-                console.log('Formatted 24h Volume:', this.formatVolume(data.volume24h));
-                
-                // Explicitly trigger change detection
-                this.cdr.markForCheck();
-                this.cdr.detectChanges();
-              });
-            } else {
-              console.log('Ticker update does not match selected product or no product selected');
-              console.log('Selected product:', this.selectedProduct?.id);
-              console.log('Ticker product:', data.productId);
+            // Ensure volume data is properly formatted
+            if (data.volume24h) {
+              console.log('Original volume24h:', data.volume24h);
+              // Make sure volume is a string
+              data.volume24h = data.volume24h.toString();
             }
-          } else {
-            console.log('Received non-ticker data:', data);
-          }
+            
+            // Create a new object to ensure change detection
+            const updatedData = {
+              ...data,
+              _timestamp: new Date().getTime() // Add timestamp to force update
+            };
+            
+            // Update the ticker data
+            this.tickerData = updatedData;
+            this.lastTickerUpdate = new Date();
+            
+            console.log('After update - tickerData:', this.tickerData);
+            
+            // Log the values to verify we're getting the data
+            console.log('Updated price from ticker:', data.price);
+            console.log('Updated 24h Change:', this.getPercentChange());
+            console.log('Updated 24h High:', data.high24h);
+            console.log('Updated 24h Low:', data.low24h);
+            console.log('Updated 24h Volume:', data.volume24h);
+            console.log('Formatted 24h Volume:', this.formatVolume(data.volume24h));
+            
+            // Explicitly trigger change detection
+            this.cdr.markForCheck();
+            this.cdr.detectChanges();
+          });
         },
         error => {
           console.error('Error subscribing to ticker:', error);
@@ -604,12 +594,7 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.autoRefreshInterval) {
         clearInterval(this.autoRefreshInterval);
       }
-      
-      // Set up new interval to refresh every 3 seconds
-      this.autoRefreshInterval = setInterval(() => {
-        this.setDebugTickerData();
-      }, 3000);
-      
+           
       // Add to subscriptions to ensure cleanup
       this.subscriptions.add({
         unsubscribe: () => {

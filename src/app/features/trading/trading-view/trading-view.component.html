@@ -15,28 +15,12 @@
   <!-- Connection status -->
   <div class="connection-status" *ngIf="!loading && !error">
     <div class="status-item">
-      <span>Backend: </span>
-      <span class="status-indicator" [ngClass]="{'connected': backendStatus === 'available', 'disconnected': backendStatus === 'unavailable'}">
-        {{ backendStatus === 'available' ? 'Connected' : backendStatus === 'unavailable' ? 'Disconnected' : 'Checking...' }}
-      </span>
-      <button *ngIf="backendStatus === 'unavailable'" (click)="checkBackendHealth()">Retry</button>
-    </div>
     <div class="status-item">
-      <span>WebSocket: </span>
+      <span>Status: </span>
       <span class="status-indicator" [ngClass]="{'connected': wsConnected, 'disconnected': !wsConnected}">
         {{ wsConnected ? 'Connected' : 'Disconnected' }}
       </span>
       <button *ngIf="!wsConnected" (click)="reconnectWebSocket()">Reconnect</button>
-    </div>
-    <div class="status-item" *ngIf="lastTickerUpdate">
-      <span>Last Ticker Update: </span>
-      <span class="status-indicator connected">{{ lastTickerUpdate | date:'HH:mm:ss' }}</span>
-    </div>
-    <div class="status-item" *ngIf="usingMockData">
-      <span class="mock-data-indicator">Using Mock Data</span>
-    </div>
-    <div class="status-item">
-      <button (click)="setDebugTickerData()">Set Debug Data</button>
     </div>
   </div>
 
