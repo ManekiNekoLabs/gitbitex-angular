@@ -230,7 +230,7 @@ export class WebsocketService {
         product_ids: [productId],
         channels: ['level2']
       };
-    } else if (channelType === 'match' || channelType === 'matches') {
+    } else if (channelType === 'match') {
       // Use the correct format for match channel
       subscribeMessage = {
         type: 'subscribe',
@@ -321,7 +321,7 @@ export class WebsocketService {
         // Ticker messages have a different format
         channel = `ticker:${message.product_id || message.productId}`;
         data = message;
-      } else if (message.type === 'match' || message.type === 'last_match') {
+      } else if (message.type === 'match') {
         // Match messages for trades - use the correct format
         const productId = message.product_id || message.productId;
         console.log(`Received match data for ${productId}:`, message);
@@ -329,7 +329,7 @@ export class WebsocketService {
         // Emit to match channel
         channel = `match:${productId}`;
         data = message;
-      } else if (message.type === 'snapshot' || message.type === 'l2update') {
+      } else if (message.type === 'l2update') {
         // Order book messages (level2)
         channel = `level2:${message.product_id || message.productId}`;
         data = message;
@@ -563,7 +563,7 @@ export class WebsocketService {
           product_ids: [productId],
           channels: ['level2']
         };
-      } else if (channelType === 'match' || channelType === 'matches') {
+      } else if (channelType === 'match') {
         unsubscribeMessage = {
           type: 'unsubscribe',
           product_ids: [productId],
@@ -644,7 +644,7 @@ export class WebsocketService {
     // Subscribe to all messages
     this.onMessage().subscribe(message => {
       // Check if this is a trade/match message
-      if (message.type === 'match' || message.type === 'last_match') {
+      if (message.type === 'match') {
         console.log('%c🔄 TRADE MATCH:', 'color: green; font-weight: bold', message);
       }
       
@@ -654,7 +654,7 @@ export class WebsocketService {
       }
       
       // Check if this is an order book message
-      if (message.type === 'snapshot' || message.type === 'l2update') {
+      if (message.type === 'l2update') {
         console.log('%c📊 ORDER BOOK:', 'color: purple; font-weight: bold', message);
       }
     });

@@ -330,18 +330,20 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     
     console.log(`Subscribing to feeds for ${productId}`);
     
-    // Subscribe to ticker channel for this product
+    // Subscribe to all channels for this product
     this.websocketService.send({
       type: 'subscribe',
       product_ids: [productId],
-      channels: ['ticker']
+      channels: ['ticker', 'level2', 'matches']  // Subscribe to all needed channels
     });
     
     // Add to our set of subscribed products
     this.productSubscriptions.add(productId);
     
-    // Subscribe to ticker updates
+    // Set up individual channel subscriptions
     this.subscribeToTickerUpdates();
+    this.subscribeToOrderBookUpdates();
+    this.subscribeToTradeUpdates();
   }
   
   private unsubscribeFromProductFeed(productId: string): void {
@@ -352,12 +354,17 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
     
     console.log(`Unsubscribing from feeds for ${productId}`);
     
-    // Unsubscribe from ticker channel
+    // Unsubscribe from all channels
     this.websocketService.send({
       type: 'unsubscribe',
       product_ids: [productId],
-      channels: ['ticker']
+      channels: ['ticker', 'level2', 'matches']
     });
+    
+    // Unsubscribe from individual channel subscriptions
+    this.websocketService.unsubscribe(`ticker:${productId}`);
+    this.websocketService.unsubscribe(`level2:${productId}`);
+    this.websocketService.unsubscribe(`matches:${productId}`);
     
     // Remove from our set of subscribed products
     this.productSubscriptions.delete(productId);
@@ -604,6 +611,55 @@ export class TradingViewComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       });
     }
+  }
+
+  // Add new methods for order book and trade subscriptions
+  private subscribeToOrderBookUpdates(): void {
+    if (!this.selectedProduct) return;
+    
+    const channel = `level2:${this.selectedProduct.id}`;
+    console.log(`Subscribing to order book updates: ${channel}`);
+    
+    this.subscriptions.add(
+      this.websocketService.subscribe(channel).subscribe(
+        (data: any) => {
+          console.log('Received order book update:', data);
+          // Handle order book updates
+          if (data.type === 'snapshot') {
+            // Handle initial snapshot
+            console.log('Received order book snapshot:', data);
+          } else if (data.type === 'l2update') {
+            // Handle incremental updates
+            console.log('Received order book update:', data);
+          }
+        },
+        error => {
+          console.error('Error subscribing to order book:', error);
+        }
+      )
+    );
+  }
+
+  private subscribeToTradeUpdates(): void {
+    if (!this.selectedProduct) return;
+    
+    const channel = `matches:${this.selectedProduct.id}`;
+    console.log(`Subscribing to trade updates: ${channel}`);
+    
+    this.subscriptions.add(
+      this.websocketService.subscribe(channel).subscribe(
+        (data: any) => {
+          console.log('Received trade update:', data);
+          // Handle trade updates
+          if (data.type === 'match') {
+            console.log('Received trade match:', data);
+          }
+        },
+        error => {
+          console.error('Error subscribing to trades:', error);
+        }
+      )
+    );
   }
 }
 
