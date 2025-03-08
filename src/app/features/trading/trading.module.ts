@@ -12,6 +12,7 @@ import { TradingViewComponent } from './trading-view/trading-view.component';
 import { OrderBookComponent } from './order-book/order-book.component';
 import { TradeHistoryComponent } from './trade-history/trade-history.component';
 import { OrderFormComponent } from './order-form/order-form.component';
+import { ChartComponent } from './chart/chart.component';
 
 @NgModule({
   declarations: [
@@ -31,7 +32,8 @@ import { OrderFormComponent } from './order-form/order-form.component';
     TradingViewComponent,
     OrderBookComponent,
     TradeHistoryComponent,
-    OrderFormComponent
+    OrderFormComponent,
+    ChartComponent
   ]
 })
 export class TradingModule { }

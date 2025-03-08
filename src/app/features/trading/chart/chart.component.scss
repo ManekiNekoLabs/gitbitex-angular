@@ -1,0 +1,107 @@
+.chart-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #151924;
+  border-radius: 4px;
+  overflow: hidden;
+  min-height: 400px;
+  position: relative;
+}
+
+.interval-selector {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #1e222d;
+  border-bottom: 1px solid #2a2e39;
+  z-index: 10;
+  
+  button {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    padding: 4px 8px;
+    margin-right: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    
+    &:hover {
+      background-color: #2a2e39;
+      color: #fff;
+    }
+    
+    &.active {
+      background-color: #2a2e39;
+      color: #fff;
+    }
+  }
+}
+
+.chart-canvas {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 350px;
+  display: block;
+  cursor: crosshair;
+}
+
+.chart-debug {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.85);
+  padding: 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  max-width: 85%;
+  width: 400px;
+  text-align: center;
+  z-index: 5;
+  display: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chart-debug.show {
+  display: block;
+}
+
+.error-message {
+  font-weight: bold;
+  color: #ff6b6b;
+  margin-bottom: 15px;
+}
+
+.error-details {
+  font-weight: normal;
+  color: #ddd;
+  font-size: 13px;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.loading-info {
+  margin-bottom: 15px;
+  color: #ddd;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: #3498db;
+  animation: spin 1s ease-in-out infinite;
+  margin: 15px auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

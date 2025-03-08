@@ -1,0 +1,30 @@
+<div class="chart-wrapper">
+  <div class="interval-selector">
+    <button [class.active]="selectedIntervalIndex === 0" (click)="setInterval(0)">1m</button>
+    <button [class.active]="selectedIntervalIndex === 1" (click)="setInterval(1)">5m</button>
+    <button [class.active]="selectedIntervalIndex === 2" (click)="setInterval(2)">15m</button>
+    <button [class.active]="selectedIntervalIndex === 3" (click)="setInterval(3)">1h</button>
+    <button [class.active]="selectedIntervalIndex === 4" (click)="setInterval(4)">1d</button>
+  </div>
+
+  <canvas #chartCanvas class="chart-canvas"></canvas>
+  
+  <!-- Debug information -->
+  <div class="chart-debug" [class.show]="showDebug || errorMessage">
+    <div *ngIf="errorMessage" class="error-message">
+      <div>{{ errorMessage }}</div>
+      <div class="error-details">
+        The chart data might not be available for ETH/USDT yet. 
+        You can try another time interval or check back later.
+      </div>
+    </div>
+    <div *ngIf="!errorMessage && !hasData">
+      <div class="loading-info">Loading chart data...</div>
+      <div class="spinner"></div>
+    </div>
+    <div *ngIf="hasData">
+      <div>Last update: {{ lastUpdateTime | date:'HH:mm:ss' }}</div>
+      <div>Candles loaded: {{ candleCount }}</div>
+    </div>
+  </div>
+</div>
