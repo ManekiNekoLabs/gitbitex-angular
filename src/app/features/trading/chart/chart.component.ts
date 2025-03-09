@@ -318,7 +318,9 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
         datasets: [
           {
             label: this.productId,
-            data: this.formatCandlesForChartJs(this.candles),
+            data: this.chartType === ChartType.CANDLESTICK 
+              ? this.formatCandlesForChartJs(this.candles) 
+              : this.formatCandlesForLineChart(this.candles),
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
             borderColor: 'rgba(255, 99, 132, 1)',
             borderWidth: 1,
