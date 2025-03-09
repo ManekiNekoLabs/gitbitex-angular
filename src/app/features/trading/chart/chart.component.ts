@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { isPlatformBrowser, CommonModule, DatePipe } from '@angular/common';
 import { environment } from '../../../../environments/environment';
+import { FormsModule } from '@angular/forms';
 
 // Import Chart.js only when in browser environment
 // We need to use require-like imports to avoid SSR issues
@@ -136,7 +137,7 @@ const DragYAxisPlugin = {
 @Component({
   selector: 'app-chart',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, FormsModule],
   templateUrl: './chart.component.html',
   styleUrls: ['./chart.component.scss']
 })
@@ -318,8 +319,8 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
         datasets: [
           {
             label: this.productId,
-            data: this.chartType === ChartType.CANDLESTICK 
-              ? this.formatCandlesForChartJs(this.candles) 
+            data: this.chartType === ChartType.CANDLESTICK
+              ? this.formatCandlesForChartJs(this.candles)
               : this.formatCandlesForLineChart(this.candles),
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
             borderColor: 'rgba(255, 99, 132, 1)',
@@ -414,8 +415,11 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
             pan: {
               enabled: this.zoomEnabled,
               mode: 'y', // Y-axis only panning
-              threshold: 10,
-              modifierKey: 'shift' // Use shift key for panning
+              modifierKey: 'shift', // Require shift key for panning
+              threshold: 5, // Lower threshold for easier activation
+              onPan: function() {
+                console.log('Panning with shift key');
+              }
             },
             zoom: {
               wheel: {
@@ -708,10 +712,10 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
 
     // Reset zoom using Chart.js built-in method
     this.chart.resetZoom();
-    
+
     // Reset the y-scale factor
     this.yScaleFactor = 1.0;
-    
+
     // Reset the y-axis scale explicitly
     const yScale = this.chart.scales.y;
     if (yScale) {
@@ -728,7 +732,7 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
 
     const input = event.target as HTMLInputElement;
     this.yScaleFactor = parseFloat(input.value);
-    
+
     // Ensure minimum value to prevent extreme compression
     if (this.yScaleFactor < 0.2) {
       this.yScaleFactor = 0.2;
