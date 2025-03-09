@@ -10,13 +10,20 @@
   position: relative;
 }
 
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e222d;
+  border-bottom: 1px solid #2a2e39;
+  z-index: 10;
+  padding: 0;
+}
+
 .interval-selector {
   display: flex;
   align-items: center;
   padding: 8px 16px;
-  background-color: #1e222d;
-  border-bottom: 1px solid #2a2e39;
-  z-index: 10;
   
   button {
     background: none;
@@ -37,6 +44,76 @@
     &.active {
       background-color: #2a2e39;
       color: #fff;
+    }
+  }
+}
+
+.chart-type-toggle {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  
+  button {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    padding: 4px 8px;
+    margin-right: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    
+    &:hover {
+      background-color: #2a2e39;
+      color: #fff;
+    }
+    
+    &.active {
+      background-color: #2a2e39;
+      color: #fff;
+    }
+    
+    .chart-type-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+      position: relative;
+    }
+    
+    .candlestick-icon:before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 7px;
+      width: 2px;
+      height: 10px;
+      background-color: currentColor;
+    }
+    
+    .candlestick-icon:after {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 4px;
+      width: 8px;
+      height: 6px;
+      border: 1px solid currentColor;
+    }
+    
+    .line-icon:before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 2px;
+      width: 12px;
+      height: 0;
+      border-top: 2px solid currentColor;
+      border-bottom: 0;
+      transform: translateY(-50%) rotate(-10deg);
     }
   }
 }
@@ -104,4 +181,18 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .chart-type-toggle {
+    width: 100%;
+    justify-content: flex-start;
+    padding-top: 0;
+  }
 }

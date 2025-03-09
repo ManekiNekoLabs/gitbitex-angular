@@ -1,9 +1,18 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, ElementRef, Input, OnChanges, SimpleChanges, NgZone, PLATFORM_ID, Inject } from '@angular/core';
-import { CommonModule, isPlatformBrowser, DatePipe } from '@angular/common';
+import { Component, OnInit, AfterViewInit, OnDestroy, OnChanges, ViewChild, ElementRef, Input, SimpleChanges, Inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { WebsocketService } from '../../../core/services/websocket.service';
-import { Subscription, timer } from 'rxjs';
+import { Subscription } from 'rxjs';
+import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../../../environments/environment';
+import Chart from 'chart.js/auto';
+import 'chartjs-adapter-date-fns';
+import { CandlestickController, CandlestickElement, OhlcController, OhlcElement } from 'chartjs-chart-financial';
+import { TooltipItem } from 'chart.js';
+import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
+
+// Register the candlestick components with Chart.js
+Chart.register(CandlestickController, CandlestickElement, OhlcController, OhlcElement);
 
 // Interface for our candle data
 interface CandleData {
@@ -13,6 +22,11 @@ interface CandleData {
   low: number;
   close: number;
   volume?: number;
+}
+
+enum ChartType {
+  CANDLESTICK = 'candlestick',
+  LINE = 'line'
 }
 
 @Component({
@@ -28,18 +42,18 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   @Input() containerWidth: number = 800;
   @Input() containerHeight: number = 500;
 
-  // Chart elements
-  private ctx: CanvasRenderingContext2D | null = null;
+  private chart: Chart | null = null;
   private resizeTimeout: any = null;
   private subscriptions: Subscription = new Subscription();
   private pollingSubscription: Subscription = new Subscription();
-  private interval: number = 3600; // Default to 1-hour candles (changed to make testing easier)
+  private interval: number = 3600; // Default to 1-hour candles
   private intervals = [60, 300, 900, 3600, 86400]; // 1min, 5min, 15min, 1h, 1d
   private pollingInterval = 10000; // 10 seconds
   private chartInitialized = false;
   
   // Make this public for the template
   public selectedIntervalIndex = 3; // Default to 1h (index 3)
+  public chartType: ChartType = ChartType.CANDLESTICK; // Default to candlestick
   
   // Debug information
   public showDebug = true; // Always show debug initially
@@ -61,41 +75,48 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   ) {}
 
   ngOnInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    
-    console.log('Chart component initialized');
-    this.subscribeToWindowResize();
-    
-    // Timeout to show an error if data doesn't load
-    setTimeout(() => {
-      if (!this.hasData && !this.errorMessage) {
-        this.errorMessage = 'Data loading timeout. This could be due to no candle data available or a connection issue.';
+    if (isPlatformBrowser(this.platformId)) {
+      console.log('Chart component initialized');
+      this.subscribeToWindowResize();
+      
+      if (this.productId) {
+        this.loadInitialCandles();
       }
-    }, 10000);
+      
+      // Timeout to show an error if data doesn't load
+      setTimeout(() => {
+        if (!this.hasData && !this.errorMessage) {
+          this.errorMessage = 'Data loading timeout. This could be due to no candle data available or a connection issue.';
+        }
+      }, 10000);
+    }
   }
 
   ngAfterViewInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    
-    console.log('Chart afterViewInit, initializing chart...');
-    // Set a slightly longer delay to ensure the container is fully rendered
-    setTimeout(() => {
-      this.initializeChart();
-      this.loadInitialCandles();
-    }, 500);
+    if (isPlatformBrowser(this.platformId)) {
+      console.log('Chart afterViewInit, initializing chart...');
+      setTimeout(() => {
+        this.initializeChart();
+      }, 500);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-
     if (changes['productId'] && !changes['productId'].firstChange) {
       console.log('Product changed, reloading chart data:', this.productId);
       this.errorMessage = '';
       this.hasData = false;
       
-      // Product changed, reload chart data
-      this.loadInitialCandles();
-      this.restartCandlePolling();
+      // Reset and destroy chart
+      if (this.chart) {
+        this.chart.destroy();
+        this.chart = null;
+      }
+      
+      if (isPlatformBrowser(this.platformId) && this.productId) {
+        this.loadInitialCandles();
+        this.initializeChart();
+      }
     }
     
     if (changes['containerWidth'] || changes['containerHeight']) {
@@ -104,328 +125,267 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   }
 
   ngOnDestroy(): void {
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+    }
+    
     this.subscriptions.unsubscribe();
     this.pollingSubscription.unsubscribe();
     
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
+    if (this.chart) {
+      this.chart.destroy();
     }
   }
 
   private initializeChart(): void {
-    if (!this.chartCanvas) {
-      console.error('Chart canvas not found');
-      this.errorMessage = 'Chart canvas not found';
-      return;
-    }
+    if (!isPlatformBrowser(this.platformId) || !this.chartCanvas) return;
     
     const canvas = this.chartCanvas.nativeElement;
-    this.ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
     
-    if (!this.ctx) {
-      console.error('Failed to get canvas context');
-      this.errorMessage = 'Failed to initialize chart canvas';
+    if (!ctx) {
+      console.error('Failed to get 2D context from canvas');
       return;
     }
     
-    // Set up canvas dimensions
-    canvas.width = this.containerWidth;
-    canvas.height = this.containerHeight;
+    // Resize canvas to its parent container
+    this.resizeChart();
     
-    console.log('Canvas initialized:', canvas.width, 'x', canvas.height);
+    // Create a Chart.js instance
+    this.chart = new Chart(ctx, {
+      type: this.chartType as any,
+      data: {
+        datasets: [
+          {
+            label: this.productId,
+            data: this.formatCandlesForChartJs(this.candles),
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: 'rgba(255, 99, 132, 1)',
+            tension: 0.1,
+            // Candlestick specific options
+            color: {
+              up: 'rgba(75, 192, 192, 1)',
+              down: 'rgba(255, 99, 132, 1)',
+              unchanged: 'rgba(180, 180, 180, 1)',
+            }
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 0
+        },
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: this.getTimeUnit(),
+              displayFormats: {
+                minute: 'HH:mm',
+                hour: 'HH:mm',
+                day: 'MMM d'
+              }
+            },
+            title: {
+              display: true,
+              text: 'Time'
+            },
+            grid: {
+              display: true,
+              color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.7)'
+            }
+          },
+          y: {
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Price'
+            },
+            grid: {
+              display: true,
+              color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.7)'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: (context: TooltipItem<any>) => {
+                const dataPoint = context.raw as any;
+                if (this.chartType === ChartType.CANDLESTICK) {
+                  return [
+                    `Open: ${dataPoint.o.toFixed(2)}`,
+                    `High: ${dataPoint.h.toFixed(2)}`,
+                    `Low: ${dataPoint.l.toFixed(2)}`,
+                    `Close: ${dataPoint.c.toFixed(2)}`,
+                    dataPoint.v ? `Volume: ${dataPoint.v.toFixed(2)}` : ''
+                  ].filter(Boolean);
+                } else {
+                  return `Price: ${dataPoint.y.toFixed(2)}`;
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
     this.chartInitialized = true;
   }
 
   private resizeChart(): void {
-    if (!this.chartCanvas || !this.ctx || !isPlatformBrowser(this.platformId)) return;
+    if (!isPlatformBrowser(this.platformId) || !this.chartCanvas) return;
     
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
+    const canvas = this.chartCanvas.nativeElement;
+    const container = canvas.parentElement;
+    
+    if (!container) return;
+    
+    // Get the container dimensions
+    const rect = container.getBoundingClientRect();
+    
+    // Set canvas dimensions to match container
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Update chart if it exists
+    if (this.chart) {
+      this.chart.resize();
     }
-    
-    this.resizeTimeout = setTimeout(() => {
-      const canvas = this.chartCanvas.nativeElement;
-      canvas.width = this.containerWidth;
-      canvas.height = this.containerHeight;
-      
-      console.log('Canvas resized:', canvas.width, 'x', canvas.height);
-      
-      // Redraw the chart if we have data
-      if (this.hasData) {
-        this.drawChart();
-      }
-    }, 100);
   }
 
   private subscribeToWindowResize(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     
     window.addEventListener('resize', () => {
-      if (this.chartCanvas) {
-        const width = this.chartCanvas.nativeElement.parentElement?.clientWidth || this.containerWidth;
-        const height = this.chartCanvas.nativeElement.parentElement?.clientHeight || this.containerHeight;
-        
-        if (width > 0 && height > 0) {
-          this.containerWidth = width;
-          this.containerHeight = height;
-          this.resizeChart();
-        }
+      if (this.resizeTimeout) {
+        clearTimeout(this.resizeTimeout);
       }
+      
+      this.resizeTimeout = setTimeout(() => {
+        this.resizeChart();
+      }, 100);
     });
   }
 
   private loadInitialCandles(): void {
-    if (!this.productId || !isPlatformBrowser(this.platformId)) return;
+    if (!this.productId) return;
     
-    console.log(`Loading candles for ${this.productId} with interval ${this.interval}`);
+    this.errorMessage = '';
+    this.hasData = false;
+    this.showDebug = true;
     
-    const url = `${environment.apiUrl}/products/${this.productId}/candles?granularity=${this.interval}&limit=100`;
-    console.log(`Requesting candles from URL: ${url}`);
+    // Fetch candles from API
+    const url = `${environment.apiUrl}/products/${this.productId}/candles?granularity=${this.interval}&limit=200`;
     
     this.http.get<any[]>(url).subscribe({
       next: (data) => {
-        console.log('Received candles response:', data);
-        
-        if (!data || !Array.isArray(data) || data.length === 0) {
-          console.log('No candle data received or empty array');
-          this.errorMessage = 'No candle data available for this product and time interval.';
-          this.showDebug = true;
-          this.hasData = false;
-          return;
-        }
-        
-        // Clear error message if we get data
-        this.errorMessage = '';
-        
-        this.processCandles(data);
+        this.ngZone.run(() => {
+          if (data && Array.isArray(data) && data.length > 0) {
+            this.processCandles(data);
+            
+            // Update chart with new candles
+            if (this.chart) {
+              this.updateChartData();
+            }
+            
+            this.hasData = true;
+            this.errorMessage = '';
+            this.showDebug = false;
+            
+            // Start polling for updates
+            this.startCandlePolling();
+          } else {
+            this.hasData = false;
+            this.errorMessage = `No chart data available for ${this.productId}`;
+          }
+          
+          this.lastUpdateTime = new Date();
+        });
       },
       error: (error) => {
-        console.error('Error loading candles:', error);
-        console.log('Request URL was:', url);
-        
-        // Set error message
-        this.errorMessage = `Failed to load candle data: ${error.status || 'Network error'}`;
-        this.showDebug = true;
-        this.hasData = false;
-        
-        // Check if the error is related to CORS or network
-        if (error.status === 0) {
-          console.error('This might be a CORS or network connectivity issue');
-        }
-        
-        // Check for 404
-        if (error.status === 404) {
-          console.error('Endpoint not found. The candles API may not be implemented on the backend');
-        }
+        this.ngZone.run(() => {
+          console.error('Error loading candles:', error);
+          this.hasData = false;
+          this.errorMessage = `Failed to load chart data for ${this.productId}`;
+          this.lastUpdateTime = new Date();
+        });
       }
     });
   }
 
   private processCandles(data: any[]): void {
-    try {
-      console.log('Processing candle data with count:', data.length);
+    // If data is in [timestamp, low, high, open, close, volume] format
+    const candles: CandleData[] = data.map(item => {
+      const time = parseInt(item[0]);
+      const low = parseFloat(item[1]);
+      const high = parseFloat(item[2]);
+      const open = parseFloat(item[3]);
+      const close = parseFloat(item[4]);
+      const volume = item[5] ? parseFloat(item[5]) : undefined;
       
-      // Format candle data
-      this.candles = data.map(candle => {
-        return {
-          time: candle[0],
-          open: parseFloat(candle[1]),
-          high: parseFloat(candle[2]),
-          low: parseFloat(candle[3]),
-          close: parseFloat(candle[4]),
-          volume: parseFloat(candle[5]) || 0
-        };
-      });
-      
-      // Reverse so newest is last (for drawing left to right)
-      this.candles.reverse();
-      
-      this.candleCount = this.candles.length;
-      this.hasData = true;
-      
-      // Set the last candle
-      if (this.candles.length > 0) {
-        this.lastCandle = this.candles[this.candles.length - 1];
-        console.log('Latest candle:', this.lastCandle);
-        this.lastUpdate = Date.now();
-        this.lastUpdateTime = new Date();
-      }
-      
-      // Draw the chart
-      this.drawChart();
-      
-      // Hide debug after successful load unless there was an error
-      if (this.hasData && !this.errorMessage) {
-        setTimeout(() => {
-          this.showDebug = false;
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('Error processing candle data:', error);
-      this.errorMessage = 'Error processing candle data: ' + (error instanceof Error ? error.message : String(error));
-      this.showDebug = true;
-    }
+      return { time, open, high, low, close, volume };
+    });
+    
+    // Sort by time (ascending) - convert to number first if needed
+    candles.sort((a, b) => {
+      const timeA = typeof a.time === 'number' ? a.time : parseInt(a.time as string);
+      const timeB = typeof b.time === 'number' ? b.time : parseInt(b.time as string);
+      return timeA - timeB;
+    });
+    
+    this.candles = candles;
+    this.lastCandle = candles[candles.length - 1];
+    this.candleCount = candles.length;
+    this.lastUpdate = Date.now();
   }
-  
-  private drawChart(): void {
-    if (!this.ctx || !this.hasData || this.candles.length === 0) return;
+
+  private updateChartData(): void {
+    if (!this.chart) return;
     
-    const canvas = this.chartCanvas.nativeElement;
-    const ctx = this.ctx;
-    
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Set background
-    ctx.fillStyle = '#151924';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw grid
-    ctx.strokeStyle = '#232632';
-    ctx.lineWidth = 1;
-    
-    // Horizontal grid lines
-    const gridLines = 5;
-    for (let i = 1; i < gridLines; i++) {
-      const y = (canvas.height / gridLines) * i + 0.5;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
+    if (this.chartType === ChartType.CANDLESTICK) {
+      this.chart.data.datasets[0].data = this.formatCandlesForChartJs(this.candles);
+    } else {
+      this.chart.data.datasets[0].data = this.formatCandlesForLineChart(this.candles);
     }
     
-    // Get min and max values for scaling
-    const prices = this.candles.flatMap(c => [c.high, c.low]);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice;
-    
-    // Add 10% padding
-    const paddedMin = minPrice - priceRange * 0.1;
-    const paddedMax = maxPrice + priceRange * 0.1;
-    const paddedRange = paddedMax - paddedMin;
-    
-    // Chart area dimensions
-    const chartTop = 30;
-    const chartBottom = canvas.height - 30;
-    const chartHeight = chartBottom - chartTop;
-    
-    // Function to convert price to y coordinate
-    const priceToY = (price: number) => chartBottom - ((price - paddedMin) / paddedRange * chartHeight);
-    
-    // Draw price scale on the right
-    ctx.fillStyle = '#DDD';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'right';
-    
-    for (let i = 0; i <= gridLines; i++) {
-      const price = paddedMin + (paddedRange / gridLines) * i;
-      const y = priceToY(price);
-      ctx.fillText(price.toFixed(2), canvas.width - 10, y + 4);
-    }
-    
-    // Calculate bar width
-    const barWidth = Math.max(2, (canvas.width - 100) / this.candles.length - 2);
-    const barSpacing = barWidth + 2;
-    
-    // Draw line chart
-    ctx.strokeStyle = '#2962FF';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    
-    this.candles.forEach((candle, i) => {
-      const x = 50 + i * barSpacing + barWidth / 2;
-      const y = priceToY(candle.close);
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    
-    ctx.stroke();
-    
-    // Draw candles
-    this.candles.forEach((candle, i) => {
-      const x = 50 + i * barSpacing;
-      const open = priceToY(candle.open);
-      const close = priceToY(candle.close);
-      const high = priceToY(candle.high);
-      const low = priceToY(candle.low);
-      
-      // Determine if bullish or bearish
-      const isBullish = candle.close >= candle.open;
-      ctx.fillStyle = isBullish ? '#26a69a' : '#ef5350';
-      
-      // Draw candle body
-      const bodyHeight = Math.abs(close - open);
-      const bodyY = isBullish ? close : open;
-      ctx.fillRect(x, bodyY, barWidth, Math.max(1, bodyHeight));
-      
-      // Draw wick
-      ctx.beginPath();
-      ctx.moveTo(x + barWidth / 2, high);
-      ctx.lineTo(x + barWidth / 2, low);
-      ctx.strokeStyle = ctx.fillStyle;
-      ctx.stroke();
-    });
-    
-    // Draw time labels at the bottom
-    if (this.candles.length > 0) {
-      ctx.fillStyle = '#DDD';
-      ctx.textAlign = 'center';
-      
-      // Show at most 5 time labels
-      const step = Math.ceil(this.candles.length / 5);
-      
-      for (let i = 0; i < this.candles.length; i += step) {
-        const candle = this.candles[i];
-        const x = 50 + i * barSpacing + barWidth / 2;
-        const time = new Date(typeof candle.time === 'number' ? candle.time * 1000 : candle.time);
-        const label = `${time.getHours()}:${time.getMinutes().toString().padStart(2, '0')}`;
-        
-        ctx.fillText(label, x, chartBottom + 20);
-      }
-    }
-    
-    // Draw current price
-    if (this.lastCandle) {
-      const lastPrice = this.lastCandle.close;
-      const y = priceToY(lastPrice);
-      
-      // Price line
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.strokeStyle = '#4CAF50';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([5, 3]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      
-      // Price label
-      ctx.fillStyle = '#4CAF50';
-      ctx.textAlign = 'left';
-      ctx.fillText(lastPrice.toFixed(2), 10, y - 5);
-    }
+    this.chart.update();
   }
 
   private startCandlePolling(): void {
-    if (!isPlatformBrowser(this.platformId) || !this.productId) return;
-    
-    console.log(`Starting polling for candles every ${this.pollingInterval}ms`);
-    
-    // Cancel existing polling
+    // Clear previous polling
     this.pollingSubscription.unsubscribe();
     this.pollingSubscription = new Subscription();
     
-    // Start new polling
-    this.pollingSubscription.add(
-      timer(this.pollingInterval, this.pollingInterval).subscribe(() => {
-        this.loadInitialCandles();
-      })
-    );
+    // Set up interval to fetch candles
+    const pollInterval = setInterval(() => {
+      this.loadInitialCandles();
+    }, this.pollingInterval);
+    
+    this.pollingSubscription.add({
+      unsubscribe: () => clearInterval(pollInterval)
+    });
   }
 
   private restartCandlePolling(): void {
@@ -438,16 +398,76 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   public setInterval(intervalIndex: number): void {
     if (intervalIndex >= 0 && intervalIndex < this.intervals.length) {
       this.selectedIntervalIndex = intervalIndex;
-      const oldInterval = this.interval;
       this.interval = this.intervals[intervalIndex];
       
-      console.log(`Changing interval from ${oldInterval} to ${this.interval}`);
-      this.errorMessage = '';  // Clear any existing errors
-      this.hasData = false;    // Reset data status
+      // Update time unit
+      if (this.chart) {
+        const options = this.chart.options;
+        if (options && options.scales && options.scales['x']) {
+          const xScale = options.scales['x'] as any;
+          if (xScale.time) {
+            xScale.time.unit = this.getTimeUnit();
+            this.chart.update();
+          }
+        }
+      }
       
       // Reload candles with new interval
+      this.candles = [];
+      this.lastCandle = null;
       this.loadInitialCandles();
       this.restartCandlePolling();
     }
+  }
+
+  public toggleChartType(): void {
+    this.chartType = this.chartType === ChartType.CANDLESTICK 
+      ? ChartType.LINE 
+      : ChartType.CANDLESTICK;
+    
+    if (this.chart) {
+      this.chart.destroy();
+      this.chart = null;
+      this.initializeChart();
+    }
+  }
+
+  private getTimeUnit(): string {
+    const intervalInSeconds = this.intervals[this.selectedIntervalIndex];
+    if (intervalInSeconds <= 60) return 'minute';
+    if (intervalInSeconds <= 3600) return 'hour';
+    return 'day';
+  }
+
+  private formatCandlesForChartJs(candles: CandleData[]): any[] {
+    return candles.map(candle => {
+      // Ensure time is a number before multiplication
+      const timeInMs = typeof candle.time === 'number' 
+        ? candle.time * 1000 
+        : parseInt(candle.time as string) * 1000;
+        
+      return {
+        x: timeInMs,
+        o: candle.open,
+        h: candle.high,
+        l: candle.low,
+        c: candle.close,
+        v: candle.volume
+      };
+    });
+  }
+
+  private formatCandlesForLineChart(candles: CandleData[]): any[] {
+    return candles.map(candle => {
+      // Ensure time is a number before multiplication
+      const timeInMs = typeof candle.time === 'number' 
+        ? candle.time * 1000 
+        : parseInt(candle.time as string) * 1000;
+        
+      return {
+        x: timeInMs,
+        y: candle.close
+      };
+    });
   }
 }

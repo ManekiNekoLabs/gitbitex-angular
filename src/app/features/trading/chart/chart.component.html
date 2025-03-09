@@ -1,10 +1,23 @@
 <div class="chart-wrapper">
-  <div class="interval-selector">
-    <button [class.active]="selectedIntervalIndex === 0" (click)="setInterval(0)">1m</button>
-    <button [class.active]="selectedIntervalIndex === 1" (click)="setInterval(1)">5m</button>
-    <button [class.active]="selectedIntervalIndex === 2" (click)="setInterval(2)">15m</button>
-    <button [class.active]="selectedIntervalIndex === 3" (click)="setInterval(3)">1h</button>
-    <button [class.active]="selectedIntervalIndex === 4" (click)="setInterval(4)">1d</button>
+  <div class="chart-header">
+    <div class="interval-selector">
+      <button [class.active]="selectedIntervalIndex === 0" (click)="setInterval(0)">1m</button>
+      <button [class.active]="selectedIntervalIndex === 1" (click)="setInterval(1)">5m</button>
+      <button [class.active]="selectedIntervalIndex === 2" (click)="setInterval(2)">15m</button>
+      <button [class.active]="selectedIntervalIndex === 3" (click)="setInterval(3)">1h</button>
+      <button [class.active]="selectedIntervalIndex === 4" (click)="setInterval(4)">1d</button>
+    </div>
+    
+    <div class="chart-type-toggle">
+      <button [class.active]="chartType === 'candlestick'" (click)="toggleChartType()">
+        <span class="chart-type-icon candlestick-icon"></span>
+        Candlestick
+      </button>
+      <button [class.active]="chartType === 'line'" (click)="toggleChartType()">
+        <span class="chart-type-icon line-icon"></span>
+        Line
+      </button>
+    </div>
   </div>
 
   <canvas #chartCanvas class="chart-canvas"></canvas>
