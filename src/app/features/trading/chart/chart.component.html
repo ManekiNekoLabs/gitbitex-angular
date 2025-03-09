@@ -1,26 +1,47 @@
 <div class="chart-wrapper">
   <div class="chart-header">
     <div class="interval-selector">
-      <button [class.active]="selectedIntervalIndex === 0" (click)="setInterval(0)">1m</button>
-      <button [class.active]="selectedIntervalIndex === 1" (click)="setInterval(1)">5m</button>
-      <button [class.active]="selectedIntervalIndex === 2" (click)="setInterval(2)">15m</button>
-      <button [class.active]="selectedIntervalIndex === 3" (click)="setInterval(3)">1h</button>
-      <button [class.active]="selectedIntervalIndex === 4" (click)="setInterval(4)">1d</button>
+      <button [class.active]="selectedIntervalIndex === 0" (click)="changeTimeInterval(0)">1m</button>
+      <button [class.active]="selectedIntervalIndex === 1" (click)="changeTimeInterval(1)">5m</button>
+      <button [class.active]="selectedIntervalIndex === 2" (click)="changeTimeInterval(2)">15m</button>
+      <button [class.active]="selectedIntervalIndex === 3" (click)="changeTimeInterval(3)">1h</button>
+      <button [class.active]="selectedIntervalIndex === 4" (click)="changeTimeInterval(4)">1d</button>
     </div>
     
-    <div class="chart-type-toggle">
-      <button [class.active]="chartType === 'candlestick'" (click)="toggleChartType()">
-        <span class="chart-type-icon candlestick-icon"></span>
-        Candlestick
-      </button>
-      <button [class.active]="chartType === 'line'" (click)="toggleChartType()">
-        <span class="chart-type-icon line-icon"></span>
-        Line
-      </button>
+    <div class="chart-controls">
+      <div class="chart-type-toggle">
+        <button [class.active]="chartType === 'candlestick'" (click)="setChartType(ChartType.CANDLESTICK)">
+          <span class="chart-type-icon candlestick-icon"></span>
+          Candlestick
+        </button>
+        <button [class.active]="chartType === 'line'" (click)="setChartType(ChartType.LINE)">
+          <span class="chart-type-icon line-icon"></span>
+          Line
+        </button>
+      </div>
+      
+      <div class="zoom-controls">
+        <button 
+          [class.active]="zoomEnabled" 
+          (click)="toggleZoom()" 
+          title="Toggle zoom and pan functionality">
+          <span class="zoom-icon"></span>
+          {{ zoomEnabled ? 'Zoom On' : 'Zoom Off' }}
+        </button>
+        <button 
+          (click)="resetZoom()" 
+          title="Reset zoom to default view"
+          [disabled]="!zoomEnabled">
+          <span class="reset-icon"></span>
+          Reset
+        </button>
+      </div>
     </div>
   </div>
 
-  <canvas #chartCanvas class="chart-canvas"></canvas>
+  <div class="chart-container">
+    <canvas #chartCanvas class="chart-canvas"></canvas>
+  </div>
   
   <!-- Debug information -->
   <div class="chart-debug" [class.show]="showDebug || errorMessage">
@@ -38,6 +59,9 @@
     <div *ngIf="hasData">
       <div>Last update: {{ lastUpdateTime | date:'HH:mm:ss' }}</div>
       <div>Candles loaded: {{ candleCount }}</div>
+      <div *ngIf="zoomEnabled" class="zoom-info">
+        Zoom: Use Ctrl+Scroll | Pan: Shift+Drag
+      </div>
     </div>
   </div>
 </div>

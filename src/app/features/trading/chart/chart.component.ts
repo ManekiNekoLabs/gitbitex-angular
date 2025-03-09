@@ -2,19 +2,19 @@ import { Component, OnInit, AfterViewInit, OnDestroy, OnChanges, ViewChild, Elem
 import { HttpClient } from '@angular/common/http';
 import { WebsocketService } from '../../../core/services/websocket.service';
 import { Subscription } from 'rxjs';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, CommonModule, DatePipe } from '@angular/common';
 import { environment } from '../../../../environments/environment';
-import Chart from 'chart.js/auto';
-import 'chartjs-adapter-date-fns';
-import { CandlestickController, CandlestickElement, OhlcController, OhlcElement } from 'chartjs-chart-financial';
-import { TooltipItem } from 'chart.js';
-import { CommonModule } from '@angular/common';
-import { DatePipe } from '@angular/common';
 
-// Register the candlestick components with Chart.js
-Chart.register(CandlestickController, CandlestickElement, OhlcController, OhlcElement);
+// Import Chart.js only when in browser environment
+// We need to use require-like imports to avoid SSR issues
+declare const window: any;
+let Chart: any;
+let zoomPlugin: any;
+let CandlestickController: any;
+let CandlestickElement: any;
+let OhlcController: any;
+let OhlcElement: any;
 
-// Interface for our candle data
 interface CandleData {
   time: number | string;
   open: number;
@@ -42,7 +42,7 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   @Input() containerWidth: number = 800;
   @Input() containerHeight: number = 500;
 
-  private chart: Chart | null = null;
+  private chart: any = null;
   private resizeTimeout: any = null;
   private subscriptions: Subscription = new Subscription();
   private pollingSubscription: Subscription = new Subscription();
@@ -50,10 +50,15 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   private intervals = [60, 300, 900, 3600, 86400]; // 1min, 5min, 15min, 1h, 1d
   private pollingInterval = 10000; // 10 seconds
   private chartInitialized = false;
+  public useMockData = false; // Set to false to use real data by default
   
   // Make this public for the template
   public selectedIntervalIndex = 3; // Default to 1h (index 3)
   public chartType: ChartType = ChartType.CANDLESTICK; // Default to candlestick
+  public zoomEnabled = true; // Enable zoom by default
+  
+  // Make ChartType enum accessible in the template
+  public ChartType = ChartType;
   
   // Debug information
   public showDebug = true; // Always show debug initially
@@ -67,12 +72,40 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   private lastCandle: CandleData | null = null;
   private lastUpdate = 0;
   
+  // Add property to store timeout reference
+  private errorTimeoutRef: any = null;
+  private windowResizeListener: any = null;
+
   constructor(
     private http: HttpClient, 
     private websocketService: WebsocketService,
     private ngZone: NgZone,
     @Inject(PLATFORM_ID) private platformId: Object
-  ) {}
+  ) {
+    // Load Chart.js dynamically only in browser environment
+    if (isPlatformBrowser(this.platformId)) {
+      import('chart.js/auto').then(module => {
+        Chart = module.default;
+        
+        // Import other modules after Chart.js is loaded
+        import('chartjs-adapter-date-fns');
+        import('chartjs-chart-financial').then(module => {
+          CandlestickController = module.CandlestickController;
+          CandlestickElement = module.CandlestickElement;
+          OhlcController = module.OhlcController;
+          OhlcElement = module.OhlcElement;
+          
+          // Register chart components
+          Chart.register(CandlestickController, CandlestickElement, OhlcController, OhlcElement);
+        });
+        
+        import('chartjs-plugin-zoom').then(module => {
+          zoomPlugin = module.default;
+          Chart.register(zoomPlugin);
+        });
+      });
+    }
+  }
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -84,9 +117,10 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
       }
       
       // Timeout to show an error if data doesn't load
-      setTimeout(() => {
+      this.errorTimeoutRef = setTimeout(() => {
         if (!this.hasData && !this.errorMessage) {
-          this.errorMessage = 'Data loading timeout. This could be due to no candle data available or a connection issue.';
+          this.errorMessage = 'Timeout waiting for chart data';
+          this.showDebug = true;
         }
       }, 10000);
     }
@@ -120,13 +154,26 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
     }
     
     if (changes['containerWidth'] || changes['containerHeight']) {
-      this.resizeChart();
+      console.log('Container size changed, resizing chart...');
+      setTimeout(() => {
+        this.resizeChart();
+      }, 100);
     }
   }
 
   ngOnDestroy(): void {
     if (this.resizeTimeout) {
       clearTimeout(this.resizeTimeout);
+    }
+    
+    // Clear error timeout if it exists
+    if (this.errorTimeoutRef) {
+      clearTimeout(this.errorTimeoutRef);
+    }
+    
+    // Remove window resize listener
+    if (isPlatformBrowser(this.platformId) && this.windowResizeListener) {
+      window.removeEventListener('resize', this.windowResizeListener);
     }
     
     this.subscriptions.unsubscribe();
@@ -138,7 +185,7 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   }
 
   private initializeChart(): void {
-    if (!isPlatformBrowser(this.platformId) || !this.chartCanvas) return;
+    if (!isPlatformBrowser(this.platformId) || !this.chartCanvas || !Chart) return;
     
     const canvas = this.chartCanvas.nativeElement;
     const ctx = canvas.getContext('2d');
@@ -148,10 +195,7 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
       return;
     }
     
-    // Resize canvas to its parent container
-    this.resizeChart();
-    
-    // Create a Chart.js instance
+    // Create a Chart.js instance with responsive options
     this.chart = new Chart(ctx, {
       type: this.chartType as any,
       data: {
@@ -231,7 +275,7 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
             mode: 'index',
             intersect: false,
             callbacks: {
-              label: (context: TooltipItem<any>) => {
+              label: (context: any) => {
                 const dataPoint = context.raw as any;
                 if (this.chartType === ChartType.CANDLESTICK) {
                   return [
@@ -246,7 +290,33 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
                 }
               }
             }
-          }
+          },
+          // Add zoom plugin configuration
+          zoom: zoomPlugin ? {
+            pan: {
+              enabled: this.zoomEnabled,
+              mode: 'xy',
+              threshold: 10,
+              modifierKey: 'shift'
+            },
+            zoom: {
+              wheel: {
+                enabled: this.zoomEnabled,
+                speed: 0.1,
+                modifierKey: 'ctrl'
+              },
+              pinch: {
+                enabled: this.zoomEnabled
+              },
+              mode: 'xy',
+            },
+            limits: {
+              y: {
+                min: 'original',
+                max: 'original'
+              }
+            }
+          } : undefined
         }
       }
     });
@@ -255,30 +325,16 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   }
 
   private resizeChart(): void {
-    if (!isPlatformBrowser(this.platformId) || !this.chartCanvas) return;
+    if (!isPlatformBrowser(this.platformId) || !this.chart) return;
     
-    const canvas = this.chartCanvas.nativeElement;
-    const container = canvas.parentElement;
-    
-    if (!container) return;
-    
-    // Get the container dimensions
-    const rect = container.getBoundingClientRect();
-    
-    // Set canvas dimensions to match container
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    
-    // Update chart if it exists
-    if (this.chart) {
-      this.chart.resize();
-    }
+    // Let Chart.js handle the resize
+    this.chart.resize();
   }
 
   private subscribeToWindowResize(): void {
     if (!isPlatformBrowser(this.platformId)) return;
     
-    window.addEventListener('resize', () => {
+    this.windowResizeListener = () => {
       if (this.resizeTimeout) {
         clearTimeout(this.resizeTimeout);
       }
@@ -286,11 +342,13 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
       this.resizeTimeout = setTimeout(() => {
         this.resizeChart();
       }, 100);
-    });
+    };
+    
+    window.addEventListener('resize', this.windowResizeListener);
   }
 
   private loadInitialCandles(): void {
-    if (!this.productId) return;
+    if (!isPlatformBrowser(this.platformId) || !this.productId) return;
     
     this.errorMessage = '';
     this.hasData = false;
@@ -303,6 +361,12 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
       next: (data) => {
         this.ngZone.run(() => {
           if (data && Array.isArray(data) && data.length > 0) {
+            // Clear error timeout as data loaded successfully
+            if (this.errorTimeoutRef) {
+              clearTimeout(this.errorTimeoutRef);
+              this.errorTimeoutRef = null;
+            }
+            
             this.processCandles(data);
             
             // Update chart with new candles
@@ -317,8 +381,9 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
             // Start polling for updates
             this.startCandlePolling();
           } else {
-            this.hasData = false;
+            // No data available, show error
             this.errorMessage = `No chart data available for ${this.productId}`;
+            this.showDebug = true;
           }
           
           this.lastUpdateTime = new Date();
@@ -327,8 +392,8 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
       error: (error) => {
         this.ngZone.run(() => {
           console.error('Error loading candles:', error);
-          this.hasData = false;
           this.errorMessage = `Failed to load chart data for ${this.productId}`;
+          this.showDebug = true;
           this.lastUpdateTime = new Date();
         });
       }
@@ -362,7 +427,7 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   }
 
   private updateChartData(): void {
-    if (!this.chart) return;
+    if (!isPlatformBrowser(this.platformId) || !this.chart) return;
     
     if (this.chartType === ChartType.CANDLESTICK) {
       this.chart.data.datasets[0].data = this.formatCandlesForChartJs(this.candles);
@@ -374,6 +439,8 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   }
 
   private startCandlePolling(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
     // Clear previous polling
     this.pollingSubscription.unsubscribe();
     this.pollingSubscription = new Subscription();
@@ -395,7 +462,9 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   }
 
   // Public methods for changing intervals
-  public setInterval(intervalIndex: number): void {
+  public changeTimeInterval(intervalIndex: number): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
     if (intervalIndex >= 0 && intervalIndex < this.intervals.length) {
       this.selectedIntervalIndex = intervalIndex;
       this.interval = this.intervals[intervalIndex];
@@ -403,8 +472,8 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
       // Update time unit
       if (this.chart) {
         const options = this.chart.options;
-        if (options && options.scales && options.scales['x']) {
-          const xScale = options.scales['x'] as any;
+        if (options && options.scales && options.scales.x) {
+          const xScale = options.scales.x as any;
           if (xScale.time) {
             xScale.time.unit = this.getTimeUnit();
             this.chart.update();
@@ -420,16 +489,26 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
     }
   }
 
+  public setChartType(type: ChartType): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
+    if (this.chartType !== type) {
+      this.chartType = type;
+      
+      if (this.chart) {
+        this.chart.destroy();
+        this.chart = null;
+        this.initializeChart();
+      }
+    }
+  }
+
   public toggleChartType(): void {
-    this.chartType = this.chartType === ChartType.CANDLESTICK 
+    const newType = this.chartType === ChartType.CANDLESTICK 
       ? ChartType.LINE 
       : ChartType.CANDLESTICK;
     
-    if (this.chart) {
-      this.chart.destroy();
-      this.chart = null;
-      this.initializeChart();
-    }
+    this.setChartType(newType);
   }
 
   private getTimeUnit(): string {
@@ -469,5 +548,40 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
         y: candle.close
       };
     });
+  }
+
+  // Add a method to toggle zoom
+  public toggleZoom(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    
+    this.zoomEnabled = !this.zoomEnabled;
+    
+    if (this.chart && this.chart.options.plugins?.zoom) {
+      const zoomOptions = this.chart.options.plugins.zoom;
+      
+      // Toggle pan and zoom
+      if (zoomOptions.pan) {
+        zoomOptions.pan.enabled = this.zoomEnabled;
+      }
+      
+      if (zoomOptions.zoom) {
+        if (zoomOptions.zoom.wheel) {
+          zoomOptions.zoom.wheel.enabled = this.zoomEnabled;
+        }
+        
+        if (zoomOptions.zoom.pinch) {
+          zoomOptions.zoom.pinch.enabled = this.zoomEnabled;
+        }
+      }
+      
+      this.chart.update();
+    }
+  }
+
+  // Add a method to reset zoom
+  public resetZoom(): void {
+    if (!isPlatformBrowser(this.platformId) || !this.chart) return;
+    
+    this.chart.resetZoom();
   }
 }

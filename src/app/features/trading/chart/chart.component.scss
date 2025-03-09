@@ -48,10 +48,16 @@
   }
 }
 
+.chart-controls {
+  display: flex;
+  align-items: center;
+}
+
 .chart-type-toggle {
   display: flex;
   align-items: center;
   padding: 8px 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   
   button {
     display: flex;
@@ -118,12 +124,20 @@
   }
 }
 
-.chart-canvas {
+.chart-container {
   flex: 1;
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 350px;
-  display: block;
+}
+
+.chart-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important; /* Overrides any inline styles from Chart.js */
+  height: 100% !important; /* Overrides any inline styles from Chart.js */
   cursor: crosshair;
 }
 
@@ -183,16 +197,148 @@
   to { transform: rotate(360deg); }
 }
 
+// Add styles for zoom controls after the chart-type-toggle styles
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  
+  button {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    padding: 4px 8px;
+    margin-right: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    
+    &:hover:not(:disabled) {
+      background-color: #2a2e39;
+      color: #fff;
+    }
+    
+    &.active {
+      background-color: rgba(52, 152, 219, 0.2);
+      color: #3498db;
+      border: 1px solid rgba(52, 152, 219, 0.3);
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .zoom-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+      position: relative;
+      
+      &:before {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 6px;
+        height: 6px;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+      }
+      
+      &:after {
+        content: '';
+        position: absolute;
+        bottom: 3px;
+        right: 3px;
+        width: 5px;
+        height: 2px;
+        background-color: currentColor;
+        transform: rotate(45deg);
+      }
+    }
+    
+    .reset-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+      position: relative;
+      
+      &:before {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        border-radius: 50%;
+        border-right-color: transparent;
+        transform: rotate(-45deg);
+      }
+      
+      &:after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        right: 5px;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 0 4px 4px 0;
+        border-color: transparent currentColor transparent transparent;
+      }
+    }
+  }
+}
+
+// Add styles for zoom info message
+.zoom-info {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #3498db;
+  background-color: rgba(52, 152, 219, 0.1);
+  padding: 5px 10px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
 // Responsive adjustments
-@media (max-width: 768px) {
+@media (max-width: 980px) {
   .chart-header {
     flex-direction: column;
     align-items: flex-start;
   }
   
-  .chart-type-toggle {
+  .chart-controls {
     width: 100%;
-    justify-content: flex-start;
-    padding-top: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .chart-type-toggle, 
+  .zoom-controls {
+    border-right: none;
   }
 }
+
+@media (max-width: 768px) {
+  .chart-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .chart-type-toggle, 
+  .zoom-controls {
+    width: 100%;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+}
+
