@@ -414,24 +414,34 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
           zoom: zoomPlugin ? {
             pan: {
               enabled: this.zoomEnabled,
-              mode: 'y', // Y-axis only panning
-              modifierKey: 'shift', // Require shift key for panning
-              threshold: 5, // Lower threshold for easier activation
-              onPan: function() {
-                console.log('Panning with shift key');
+              mode: 'xy',  // Allow panning in both directions
+              threshold: 10, // Minimum distance for panning to start
+              // No modifierKey - allow direct dragging without shift
+              speed: 10,    // Faster panning speed
+              onPanComplete: function() {
               }
             },
             zoom: {
               wheel: {
                 enabled: this.zoomEnabled,
-                speed: 0.1
+                speed: 0.1,
+                // Smooth scrolling to improve experience
+                smooth: {
+                  duration: 250, // Smooth animation duration
+                  enabled: true
+                }
               },
               pinch: {
                 enabled: this.zoomEnabled
               },
-              mode: 'y', // Y-axis only zooming
+              mode: 'xy', // Allow zooming in both directions
+              // Double-click to zoom in (per TradingView)
+              doubleClickSpeed: 300
             },
             limits: {
+              x: {
+                minRange: 60 * 1000, // Minimum 1 minute range for x-axis
+              },
               y: {
                 min: 'original',
                 max: 'original'
@@ -698,8 +708,6 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
         if (zoomOptions.zoom.pinch) {
           zoomOptions.zoom.pinch.enabled = this.zoomEnabled;
         }
-
-        zoomOptions.zoom.mode = 'y'; // Ensure it's set to y-axis only
       }
 
       this.chart.update();
@@ -716,12 +724,21 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
     // Reset the y-scale factor
     this.yScaleFactor = 1.0;
 
-    // Reset the y-axis scale explicitly
-    const yScale = this.chart.scales.y;
-    if (yScale) {
+    // Reset both axes explicitly
+    if (this.chart.scales) {
+      const yScale = this.chart.scales.y;
+      const xScale = this.chart.scales.x;
+
       // Reset to auto-scaling by setting min and max to undefined
-      yScale.options.min = undefined;
-      yScale.options.max = undefined;
+      if (yScale) {
+        yScale.options.min = undefined;
+        yScale.options.max = undefined;
+      }
+
+      if (xScale) {
+        xScale.options.min = undefined;
+        xScale.options.max = undefined;
+      }
       this.chart.update();
     }
   }

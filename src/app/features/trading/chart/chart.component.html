@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <div class="chart-container" title="Vertical Zoom: Use Mouse Wheel | Vertical Pan: Shift+Drag | Drag Y-axis to shift price scale">
+  <div class="chart-container" title="Drag to pan chart | Mouse wheel to zoom | Drag Y-axis to shift price scale">
     <canvas #chartCanvas class="chart-canvas"></canvas>
   </div>
   
@@ -71,8 +71,10 @@
       <div>Last update: {{ lastUpdateTime | date:'HH:mm:ss' }}</div>
       <div>Candles loaded: {{ candleCount }}</div>
       <div *ngIf="zoomEnabled" class="zoom-info">
-        <div>Vertical Zoom: Mouse Wheel | Vertical Pan: Shift+Drag</div>
-        <div>TradingView-style: Drag Y-axis to shift price scale</div>
+        <div>TradingView-like controls:</div>
+        <div>• Drag to pan chart</div>
+        <div>• Mouse wheel to zoom</div>
+        <div>• Drag Y-axis to shift price scale</div>
       </div>
     </div>
   </div>
