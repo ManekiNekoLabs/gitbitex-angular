@@ -706,8 +706,20 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
   public resetZoom(): void {
     if (!isPlatformBrowser(this.platformId) || !this.chart) return;
 
+    // Reset zoom using Chart.js built-in method
     this.chart.resetZoom();
+    
+    // Reset the y-scale factor
     this.yScaleFactor = 1.0;
+    
+    // Reset the y-axis scale explicitly
+    const yScale = this.chart.scales.y;
+    if (yScale) {
+      // Reset to auto-scaling by setting min and max to undefined
+      yScale.options.min = undefined;
+      yScale.options.max = undefined;
+      this.chart.update();
+    }
   }
 
   // Add a method to handle scale factor slider changes
@@ -716,6 +728,11 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
 
     const input = event.target as HTMLInputElement;
     this.yScaleFactor = parseFloat(input.value);
+    
+    // Ensure minimum value to prevent extreme compression
+    if (this.yScaleFactor < 0.2) {
+      this.yScaleFactor = 0.2;
+    }
 
     // Get the current y-axis scale
     const yScale = this.chart.scales.y;
