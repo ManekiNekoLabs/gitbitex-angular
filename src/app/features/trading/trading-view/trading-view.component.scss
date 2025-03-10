@@ -136,6 +136,7 @@
   align-items: center;
   gap: 10px;
   margin-right: 20px;
+  flex-wrap: wrap;
 }
 
 select {
@@ -393,4 +394,24 @@ h3 {
 .order-book-container::after,
 .trade-history-container::after {
   display: none;
+}
+
+/* Add styles for the chart library toggle button */
+.chart-library-toggle {
+  background-color: #3a3f4b;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: #4a4f5b;
+  }
+  
+  &:active {
+    background-color: #5a5f6b;
+  }
 }

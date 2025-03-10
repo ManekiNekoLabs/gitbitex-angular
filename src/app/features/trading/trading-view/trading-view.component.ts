@@ -17,8 +17,8 @@ import { MatGridListModule } from '@angular/material/grid-list';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 
-// Import chart component
-import { ChartComponent } from '../chart/chart.component';
+// Import lightweight chart component only
+import { LightweightChartComponent } from '../lightweight-chart/lightweight-chart.component';
 
 // Define the TickerData interface
 interface TickerData {
@@ -51,7 +51,7 @@ interface TickerData {
     OrderBookComponent,
     TradeHistoryComponent,
     OrderFormComponent,
-    ChartComponent
+    LightweightChartComponent
   ],
   templateUrl: './trading-view.component.html',
   styleUrl: './trading-view.component.scss',
