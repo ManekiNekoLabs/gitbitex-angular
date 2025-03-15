@@ -61,6 +61,18 @@ export class OrderBookComponent implements OnInit, OnChanges, OnDestroy {
     return Math.max(...orders.map(order => order.size));
   }
 
+  // Calculate the price difference between lowest ask and highest bid
+  getSpread(): number {
+    if (this.sellOrders.length === 0 || this.buyOrders.length === 0) return 0;
+    return this.sellOrders[0].price - this.buyOrders[0].price;
+  }
+
+  // Calculate the spread as a percentage of the lowest ask price
+  getSpreadPercentage(): number {
+    if (this.sellOrders.length === 0 || this.buyOrders.length === 0) return 0;
+    return (this.getSpread() / this.sellOrders[0].price) * 100;
+  }
+
   private loadOrderBook(): void {
     if (!this.productId) return;
 

@@ -21,7 +21,7 @@
       </div>
       <div class="order-list-content">
         <ng-container *ngIf="sellOrders.length > 0; else noSellOrders">
-          <div class="order-row" *ngFor="let order of sellOrders.slice(0, 10)">
+          <div class="order-row" *ngFor="let order of sellOrders.slice().reverse().slice(0, 10)">
             <span class="price sell-price">{{ order.price | number:'1.2-2' }}</span>
             <span class="size">{{ order.size | number:'1.4-4' }}</span>
             <span class="total">{{ order.size * order.price | number:'1.2-2' }}</span>
@@ -38,8 +38,8 @@
     
     <!-- Spread -->
     <div class="spread-info" *ngIf="sellOrders.length > 0 && buyOrders.length > 0">
-      <span>Spread: {{ (sellOrders[0].price - buyOrders[0].price) | number:'1.2-2' }} 
-        ({{ ((sellOrders[0].price - buyOrders[0].price) / sellOrders[0].price * 100) | number:'1.2-2' }}%)</span>
+      <span>Spread: {{ getSpread() | number:'1.2-2' }} 
+        ({{ getSpreadPercentage() | number:'1.2-2' }}%)</span>
     </div>
     
     <!-- Buy Orders (Bids) -->
