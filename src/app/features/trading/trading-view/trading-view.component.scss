@@ -6,7 +6,7 @@
   background-color: #1e2026;
   color: #fff;
   padding: 0;
-  overflow: hidden;
+  overflow: auto;
   max-width: 100vw;
   margin: 0;
   box-sizing: border-box;
@@ -231,6 +231,7 @@ select {
   width: 41.67%; /* 5/12 columns */
   display: flex;
   flex-direction: column;
+  padding-bottom: 20px;
 }
 
 .sidebar-row {
@@ -300,6 +301,9 @@ h3 {
 @media (max-width: 1200px) {
   .trading-grid {
     flex-direction: column;
+    padding-bottom: 20px;
+    height: auto;
+    min-height: 100%;
   }
   
   .chart-area,
@@ -308,28 +312,47 @@ h3 {
   }
   
   .chart-area {
-    height: 50%;
+    height: 500px; /* Fixed height for the chart on mobile */
+    min-height: 400px;
     border-right: none;
     border-bottom: 1px solid #3a3f4b;
+    margin-bottom: 20px;
   }
   
   .trading-sidebar {
-    height: 50%;
+    height: auto;
+    min-height: 800px; /* Ensure enough space for all components */
+    padding-bottom: 30px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
   
   .sidebar-row {
     flex-direction: column;
+    height: auto;
+    min-height: 800px;
+  }
+  
+  .order-book-container,
+  .trade-history-container,
+  .order-form-container {
+    flex: 0 0 auto; /* Don't let them shrink */
+    height: auto; 
+    min-height: 250px; /* Minimum height to ensure visibility */
+    border-right: none;
   }
   
   .order-book-container,
   .trade-history-container {
-    border-right: none;
     border-bottom: 1px solid #3a3f4b;
-    height: 33.33%;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
   }
   
   .order-form-container {
-    height: 33.33%;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
   }
 }
 
@@ -413,5 +436,19 @@ h3 {
   
   &:active {
     background-color: #5a5f6b;
+  }
+}
+
+/* Add additional responsive styles */
+@media (max-width: 1200px) {
+  .trading-container {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    padding-bottom: 50px; /* Add padding at the bottom to prevent cut-off */
+  }
+  
+  .trading-content {
+    overflow: visible; /* Let content expand */
   }
 }
