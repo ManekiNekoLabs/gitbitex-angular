@@ -84,7 +84,9 @@
           [disabled]="true">
       </div>
 
+      <!-- Submit button - only visible when authenticated -->
       <button
+        *ngIf="isAuthenticated"
         type="submit"
         class="submit-button"
         [ngClass]="{'buy': orderSide === OrderSide.BUY, 'sell': orderSide === OrderSide.SELL}"

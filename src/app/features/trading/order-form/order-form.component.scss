@@ -19,10 +19,10 @@
       cursor: pointer;
       color: #8f9bad;
       position: relative;
-      
+
       &.active {
         color: #fff;
-        
+
         &:after {
           content: '';
           position: absolute;
@@ -33,7 +33,7 @@
           background-color: #3498db;
         }
       }
-      
+
       &:hover:not(.active) {
         color: #fff;
       }
@@ -63,7 +63,7 @@
       border-radius: 4px;
       color: #fff;
       font-size: 14px;
-      
+
       &:focus {
         outline: none;
         border-color: #3498db;
@@ -85,7 +85,7 @@
       color: #8f9bad;
       font-size: 12px;
       cursor: pointer;
-      
+
       &:hover {
         background-color: rgba(255, 255, 255, 0.1);
       }
@@ -100,25 +100,25 @@
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    
+
     &.buy {
       background-color: #0ecb81;
       color: #fff;
-      
+
       &:hover {
         background-color: color.adjust(#0ecb81, $lightness: -5%);
       }
     }
-    
+
     &.sell {
       background-color: #f6465d;
       color: #fff;
-      
+
       &:hover {
         background-color: color.adjust(#f6465d, $lightness: -5%);
       }
     }
-    
+
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -132,7 +132,7 @@
   align-items: center;
   padding: 10px 15px;
   border-bottom: 1px solid #3a3f48;
-  
+
   h3 {
     margin: 0;
     font-size: 16px;
@@ -143,7 +143,7 @@
 .order-type-tabs {
   display: flex;
   margin-bottom: 15px;
-  
+
   .tab-button {
     flex: 1;
     padding: 8px 0;
@@ -152,15 +152,15 @@
     color: #a1a5b0;
     font-size: 14px;
     cursor: pointer;
-    
+
     &:first-child {
       border-radius: 4px 0 0 4px;
     }
-    
+
     &:last-child {
       border-radius: 0 4px 4px 0;
     }
-    
+
     &.active {
       background-color: rgba(240, 185, 11, 0.1);
       border-color: #f0b90b;
@@ -172,7 +172,7 @@
 .order-side-buttons {
   display: flex;
   margin-bottom: 20px;
-  
+
   .side-button {
     flex: 1;
     padding: 10px 0;
@@ -180,23 +180,23 @@
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    
+
     &.buy {
       background-color: rgba(14, 203, 129, 0.1);
       color: #0ecb81;
       border-radius: 4px 0 0 4px;
-      
+
       &.active {
         background-color: #0ecb81;
         color: #fff;
       }
     }
-    
+
     &.sell {
       background-color: rgba(246, 70, 93, 0.1);
       color: #f6465d;
       border-radius: 0 4px 4px 0;
-      
+
       &.active {
         background-color: #f6465d;
         color: #fff;
@@ -214,13 +214,13 @@ form {
 .form-group {
   display: flex;
   flex-direction: column;
-  
+
   label {
     font-size: 12px;
     color: #a1a5b0;
     margin-bottom: 5px;
   }
-  
+
   input {
     padding: 10px;
     background-color: #2b2f36;
@@ -228,26 +228,26 @@ form {
     border-radius: 4px;
     color: #fff;
     font-size: 14px;
-    
+
     &:focus {
       outline: none;
       border-color: #f0b90b;
     }
-    
+
     &:disabled {
       opacity: 0.7;
       cursor: not-allowed;
     }
   }
-  
+
   .input-with-button {
     display: flex;
-    
+
     input {
       flex: 1;
       border-radius: 4px 0 0 4px;
     }
-    
+
     .max-button {
       padding: 0 10px;
       background-color: #3a3f48;
@@ -258,13 +258,13 @@ form {
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      
+
       &:hover {
         background-color: #4a4f58;
       }
     }
   }
-  
+
   .balance-info {
     font-size: 12px;
     color: #a1a5b0;
@@ -281,25 +281,25 @@ form {
   font-weight: 600;
   cursor: pointer;
   margin-top: 10px;
-  
+
   &.buy {
     background-color: #0ecb81;
     color: #fff;
-    
+
     &:hover {
       background-color: #0bb974;
     }
   }
-  
+
   &.sell {
     background-color: #f6465d;
     color: #fff;
-    
+
     &:hover {
       background-color: #e03e53;
     }
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -310,21 +310,21 @@ form {
 .unauthenticated-container {
   padding: 2rem 1rem;
   text-align: center;
-  
+
   .auth-message {
     margin-bottom: 1.5rem;
-    
+
     p {
       color: var(--text-color-secondary, #6b7280);
       font-size: 1rem;
     }
   }
-  
+
   .auth-buttons {
     display: flex;
     gap: 1rem;
     justify-content: center;
-    
+
     .auth-button {
       flex: 1;
       padding: 0.75rem 1rem;
@@ -333,21 +333,21 @@ form {
       text-align: center;
       text-decoration: none;
       transition: all 0.2s ease;
-      
+
       &.login {
         background-color: transparent;
         border: 1px solid #f0b90b;
         color: #f0b90b;
-        
+
         &:hover {
           background-color: rgba(240, 185, 11, 0.05);
         }
       }
-      
+
       &.signup {
         background-color: #f0b90b;
         color: white;
-        
+
         &:hover {
           background-color: color.adjust(#f0b90b, $lightness: -5%);
         }
@@ -372,28 +372,28 @@ form {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 46px;
+  padding: 10px 0; /* Match the side-button padding */
   border-radius: 4px;
   font-size: 16px;
   font-weight: 500;
   text-decoration: none;
   transition: all 0.2s ease;
-  
+
   &.signup {
     background-color: #f0b90b;
     color: #1e2026; /* Dark text color */
-    
+
     &:hover {
       background-color: color.adjust(#f0b90b, $lightness: -5%);
     }
   }
-  
+
   &.login {
-    background-color: #2b2f36; /* Dark background color */
+    background-color: #383e48;
     color: #fff;
-    
+
     &:hover {
-      background-color: #3a3f48;
+      background-color: #424852;
     }
   }
 }
