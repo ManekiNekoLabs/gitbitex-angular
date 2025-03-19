@@ -1,1 +1,179 @@
-<p>signup works!</p>
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>Create an Account</h1>
+      <p>Join GitBitex to start trading cryptocurrencies</p>
+    </div>
+
+    <form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email" 
+          placeholder="Enter your email"
+          autocomplete="email">
+        @if ((signupForm.get('email')?.invalid && signupForm.get('email')?.touched) || isSubmitted) {
+          <div class="error-message">
+            @if (signupForm.get('email')?.errors?.['required']) {
+              <span>Email is required</span>
+            }
+            @if (signupForm.get('email')?.errors?.['email']) {
+              <span>Please enter a valid email address</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Username -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input 
+          type="text" 
+          id="username" 
+          formControlName="username" 
+          placeholder="Choose a username"
+          autocomplete="username">
+        @if ((signupForm.get('username')?.invalid && signupForm.get('username')?.touched) || isSubmitted) {
+          <div class="error-message">
+            @if (signupForm.get('username')?.errors?.['required']) {
+              <span>Username is required</span>
+            }
+            @if (signupForm.get('username')?.errors?.['minlength']) {
+              <span>Username must be at least 3 characters</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Country -->
+      <div class="form-group">
+        <label for="country">Country of Residence</label>
+        <select 
+          id="country" 
+          formControlName="country">
+          <option value="">Select your country</option>
+          <option value="US">United States</option>
+          <option value="CA">Canada</option>
+          <option value="GB">United Kingdom</option>
+          <option value="AU">Australia</option>
+          <option value="DE">Germany</option>
+          <option value="FR">France</option>
+          <option value="JP">Japan</option>
+          <option value="SG">Singapore</option>
+          <!-- Add more countries as needed -->
+        </select>
+        @if ((signupForm.get('country')?.invalid && signupForm.get('country')?.touched) || isSubmitted) {
+          <div class="error-message">
+            @if (signupForm.get('country')?.errors?.['required']) {
+              <span>Please select your country</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password" 
+          placeholder="Create a secure password"
+          autocomplete="new-password">
+        
+        <!-- Password strength indicator -->
+        @if (signupForm.get('password')?.value) {
+          <div class="password-strength">
+            <div class="strength-text">
+              Password strength: <span [style.color]="getPasswordStrength().color">{{ getPasswordStrength().text }}</span>
+            </div>
+            <div class="strength-bar-container">
+              <div class="strength-bar" [style.width.%]="getPasswordStrength().text === 'None' ? 0 : (getPasswordStrength().text === 'Too short' ? 10 : (getPasswordStrength().text === 'Weak' ? 25 : (getPasswordStrength().text === 'Fair' ? 50 : (getPasswordStrength().text === 'Good' ? 75 : 100))))" [style.background-color]="getPasswordStrength().color"></div>
+            </div>
+          </div>
+        }
+        
+        @if ((signupForm.get('password')?.invalid && signupForm.get('password')?.touched) || isSubmitted) {
+          <div class="error-message">
+            @if (signupForm.get('password')?.errors?.['required']) {
+              <span>Password is required</span>
+            }
+            @if (signupForm.get('password')?.errors?.['minlength']) {
+              <span>Password must be at least 8 characters</span>
+            }
+            @if (signupForm.get('password')?.errors?.['passwordStrength']) {
+              <span>
+                Password must include at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special character
+              </span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input 
+          type="password" 
+          id="confirmPassword" 
+          formControlName="confirmPassword" 
+          placeholder="Confirm your password"
+          autocomplete="new-password">
+        @if ((signupForm.get('confirmPassword')?.invalid && signupForm.get('confirmPassword')?.touched) || isSubmitted) {
+          <div class="error-message">
+            @if (signupForm.get('confirmPassword')?.errors?.['required']) {
+              <span>Please confirm your password</span>
+            }
+            @if (signupForm.get('confirmPassword')?.errors?.['passwordMismatch']) {
+              <span>Passwords don't match</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Terms and Conditions -->
+      <div class="form-group checkbox-group">
+        <div class="checkbox-container">
+          <input 
+            type="checkbox" 
+            id="terms" 
+            formControlName="terms">
+          <label for="terms" class="checkbox-label">I agree to the <a routerLink="/legal/terms">Terms of Service</a> and <a routerLink="/legal/privacy">Privacy Policy</a></label>
+        </div>
+        @if ((signupForm.get('terms')?.invalid && signupForm.get('terms')?.touched) || isSubmitted) {
+          <div class="error-message">
+            @if (signupForm.get('terms')?.errors?.['required']) {
+              <span>You must accept the terms to continue</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Error message for the whole form -->
+      @if (error) {
+        <div class="form-error">
+          {{ error }}
+        </div>
+      }
+
+      <!-- Submit button -->
+      <button 
+        type="submit" 
+        class="auth-button" 
+        [disabled]="loading">
+        @if (!loading) {
+          <span>Create Account</span>
+        } @else {
+          <span class="spinner"></span>
+        }
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Already have an account? <a routerLink="/auth/login">Log in</a></p>
+    </div>
+  </div>
+</div>

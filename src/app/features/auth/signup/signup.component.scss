@@ -1,0 +1,208 @@
+@use "sass:color";
+
+// Main container for auth pages
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px); // Adjust based on your header height
+  padding: 2rem;
+  background-color: var(--bg-color-secondary, #f9fafb);
+}
+
+// Card styling
+.auth-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 2rem;
+  background-color: var(--bg-color-primary, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+// Header section
+.auth-header {
+  margin-bottom: 2rem;
+  text-align: center;
+
+  h1 {
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-color-primary, #111827);
+  }
+
+  p {
+    color: var(--text-color-secondary, #6b7280);
+    font-size: 1rem;
+  }
+}
+
+// Form styles
+form {
+  .form-group {
+    margin-bottom: 1.5rem;
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--text-color-primary, #111827);
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      line-height: 1.5;
+      border: 1px solid var(--border-color, #d1d5db);
+      border-radius: 6px;
+      background-color: var(--bg-color-primary, #ffffff);
+      transition: border-color 0.2s ease;
+
+      &:focus {
+        outline: none;
+        border-color: #f0b90b;
+        box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.1);
+      }
+
+      &::placeholder {
+        color: var(--text-color-tertiary, #9ca3af);
+      }
+    }
+
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 1rem;
+      padding-right: 2.5rem;
+    }
+
+    .error-message {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--error-color, #dc2626);
+    }
+  }
+
+  // Password strength indicator
+  .password-strength {
+    margin-top: 0.75rem;
+
+    .strength-text {
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+      color: var(--text-color-secondary, #6b7280);
+    }
+
+    .strength-bar-container {
+      height: 4px;
+      background-color: #e5e7eb;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .strength-bar {
+      height: 100%;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+  }
+
+  // Checkbox styling
+  .checkbox-group {
+    .checkbox-container {
+      display: flex;
+      align-items: flex-start;
+      
+      input[type="checkbox"] {
+        width: auto;
+        margin-right: 0.75rem;
+        margin-top: 0.25rem;
+      }
+      
+      .checkbox-label {
+        font-size: 0.875rem;
+        color: var(--text-color-secondary, #6b7280);
+        
+        a {
+          color: #f0b90b;
+          text-decoration: none;
+          
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  }
+
+  // Error message for the whole form
+  .form-error {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    color: var(--error-color, #dc2626);
+    background-color: rgba(220, 38, 38, 0.05);
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
+  // Submit button
+  .auth-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: #f0b90b;
+    color: white;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &:hover:not(:disabled) {
+      background-color: color.adjust(#f0b90b, $lightness: -5%);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      width: 1.5rem;
+      height: 1.5rem;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+// Footer styling
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-color-secondary, #6b7280);
+
+  a {
+    color: #f0b90b;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Animation for loading spinner
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

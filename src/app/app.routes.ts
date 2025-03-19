@@ -19,6 +19,10 @@ export const routes: Routes = [
     loadChildren: () => import('./features/account/account.module').then(m => m.AccountModule)
   },
   {
+    path: 'legal',
+    loadChildren: () => import('./features/legal/legal.module').then(m => m.LegalModule)
+  },
+  {
     path: '**',
     redirectTo: 'trading'
   }

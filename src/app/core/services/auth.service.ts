@@ -1,7 +1,7 @@
 import { Injectable, PLATFORM_ID, Inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
+import { catchError, map, tap, delay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { isPlatformBrowser } from '@angular/common';
 
@@ -66,6 +66,40 @@ export class AuthService {
           }
         }),
         catchError(this.handleError)
+      );
+  }
+
+  signup(email: string, password: string, username: string, country: string): Observable<any> {
+    const headers = new HttpHeaders().set('Content-Type', 'application/json');
+    
+    return this.http.post<AuthResponse>(`${this.API_URL}/signup`, { 
+      email, 
+      password, 
+      username, 
+      country 
+    }, { headers })
+      .pipe(
+        tap(response => {
+          console.log('Signup response:', response);
+        }),
+        catchError(this.handleError)
+      );
+  }
+
+  requestPasswordReset(email: string): Observable<any> {
+    const headers = new HttpHeaders().set('Content-Type', 'application/json');
+    
+    // In a real application, this would call the actual API endpoint
+    // return this.http.post<any>(`${this.API_URL}/reset-password`, { email }, { headers })
+    //   .pipe(
+    //     catchError(this.handleError)
+    //   );
+    
+    // For now, we'll use a mock response with a delay to simulate an API call
+    console.log('Password reset requested for:', email);
+    return of({ success: true, message: 'Password reset email sent' })
+      .pipe(
+        delay(1500) // simulate network delay
       );
   }
 

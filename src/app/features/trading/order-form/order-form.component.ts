@@ -1,16 +1,18 @@
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { Product } from '../../../core/models/product.model';
 import { ProductService } from '../../../core/services/product.service';
 import { OrderService } from '../../../core/services/order.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { OrderSide, OrderType } from '../../../core/models/order.model';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-order-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './order-form.component.html',
   styleUrl: './order-form.component.scss'
 })
@@ -28,6 +30,7 @@ export class OrderFormComponent implements OnInit, OnChanges, OnDestroy {
   orderForm: FormGroup;
   loading = false;
   error = false;
+  isAuthenticated = false;
   
   // Mock user balance
   userBalance = {
@@ -40,13 +43,21 @@ export class OrderFormComponent implements OnInit, OnChanges, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private productService: ProductService,
-    private orderService: OrderService
+    private orderService: OrderService,
+    private authService: AuthService
   ) {
     this.orderForm = this.createOrderForm();
   }
   
   ngOnInit(): void {
     this.updateFormValidators();
+    
+    // Subscribe to auth state changes
+    this.subscriptions.push(
+      this.authService.token$.subscribe(token => {
+        this.isAuthenticated = !!token;
+      })
+    );
   }
   
   ngOnChanges(changes: SimpleChanges): void {
@@ -123,6 +134,11 @@ export class OrderFormComponent implements OnInit, OnChanges, OnDestroy {
   }
   
   placeOrder(): void {
+    if (!this.isAuthenticated) {
+      console.log('User not authenticated. Redirecting to login page.');
+      return;
+    }
+
     if (this.orderForm.invalid || !this.product || !this.productId) {
       return;
     }

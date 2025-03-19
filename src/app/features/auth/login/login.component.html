@@ -1,1 +1,74 @@
-<p>login works!</p>
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>Login to your account</h1>
+      <p>Welcome back to GitBitex Exchange</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email" 
+          placeholder="Enter your email"
+          autocomplete="email">
+        @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+          <div class="error-message">
+            @if (loginForm.get('email')?.errors?.['required']) {
+              <span>Email is required</span>
+            }
+            @if (loginForm.get('email')?.errors?.['email']) {
+              <span>Please enter a valid email address</span>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="form-group">
+        <div class="password-label-row">
+          <label for="password">Password</label>
+          <a routerLink="/auth/forgot-password" class="forgot-link">Forgot password?</a>
+        </div>
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password" 
+          placeholder="Enter your password"
+          autocomplete="current-password">
+        @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+          <div class="error-message">
+            @if (loginForm.get('password')?.errors?.['required']) {
+              <span>Password is required</span>
+            }
+            @if (loginForm.get('password')?.errors?.['minlength']) {
+              <span>Password must be at least 6 characters</span>
+            }
+          </div>
+        }
+      </div>
+
+      @if (error) {
+        <div class="form-error">
+          {{ error }}
+        </div>
+      }
+
+      <button 
+        type="submit" 
+        class="auth-button" 
+        [disabled]="loginForm.invalid || loading">
+        @if (!loading) {
+          <span>Log In</span>
+        } @else {
+          <span class="spinner"></span>
+        }
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Don't have an account? <a routerLink="/auth/signup">Sign up</a></p>
+    </div>
+  </div>
+</div>
