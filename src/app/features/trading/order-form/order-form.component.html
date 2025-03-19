@@ -2,117 +2,95 @@
   <div class="order-form-header">
     <h3>Place Order</h3>
   </div>
-  
+
   <!-- Loading State -->
-  @if (loading) {
-    <div class="loading-container">
-      <div class="spinner"></div>
-      <p>Loading product data...</p>
-    </div>
-  }
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading product data...</p>
+  </div>
 
   <!-- Error State -->
-  @if (error) {
-    <div class="error-container">
-      <p>Failed to load product data. Please try again.</p>
-      <button (click)="loadProduct()" class="retry-button">Retry</button>
+  <div *ngIf="error" class="error-container">
+    <p>Failed to load product data. Please try again.</p>
+    <button (click)="loadProduct()" class="retry-button">Retry</button>
+  </div>
+
+  <div *ngIf="!loading && !error" class="order-form-content">
+    <!-- Order type tabs -->
+    <div class="order-type-tabs">
+      <button
+        class="tab-button"
+        [ngClass]="{'active': orderType === OrderType.LIMIT}"
+        (click)="setOrderType(OrderType.LIMIT)">
+        Limit
+      </button>
+      <button
+        class="tab-button"
+        [ngClass]="{'active': orderType === OrderType.MARKET}"
+        (click)="setOrderType(OrderType.MARKET)">
+        Market
+      </button>
     </div>
-  }
-  
-  <!-- Unauthenticated State -->
-  @if (!isAuthenticated && !loading && !error) {
-    <div class="unauthenticated-container">
-      <div class="auth-message">
-        <p>Please log in or create an account to start trading.</p>
-      </div>
-      <div class="auth-buttons">
-        <a routerLink="/auth/login" class="auth-button login">Log In</a>
-        <a routerLink="/auth/signup" class="auth-button signup">Sign Up</a>
-      </div>
+
+    <!-- Order side buttons -->
+    <div class="order-side-buttons">
+      <button
+        class="side-button buy"
+        [ngClass]="{'active': orderSide === OrderSide.BUY}"
+        (click)="setOrderSide(OrderSide.BUY)">
+        Buy
+      </button>
+      <button
+        class="side-button sell"
+        [ngClass]="{'active': orderSide === OrderSide.SELL}"
+        (click)="setOrderSide(OrderSide.SELL)">
+        Sell
+      </button>
     </div>
-  }
-  
-  <!-- Authenticated Trading Form -->
-  @if (isAuthenticated && !loading && !error) {
-    <div class="order-form-content">
-      <!-- Order type tabs -->
-      <div class="order-type-tabs">
-        <button 
-          class="tab-button" 
-          [ngClass]="{'active': orderType === OrderType.LIMIT}" 
-          (click)="setOrderType(OrderType.LIMIT)">
-          Limit
-        </button>
-        <button 
-          class="tab-button" 
-          [ngClass]="{'active': orderType === OrderType.MARKET}" 
-          (click)="setOrderType(OrderType.MARKET)">
-          Market
-        </button>
+
+    <!-- Order form -->
+    <form [formGroup]="orderForm" (ngSubmit)="placeOrder()">
+      <div class="form-group">
+        <label>Price ({{ product?.quoteCurrency }})</label>
+        <input
+          type="number"
+          formControlName="price"
+          placeholder="0.00"
+          [disabled]="orderType === OrderType.MARKET"
+          (input)="calculateTotal()">
       </div>
-      
-      <!-- Order side buttons -->
-      <div class="order-side-buttons">
-        <button 
-          class="side-button buy" 
-          [ngClass]="{'active': orderSide === OrderSide.BUY}" 
-          (click)="setOrderSide(OrderSide.BUY)">
-          Buy
-        </button>
-        <button 
-          class="side-button sell" 
-          [ngClass]="{'active': orderSide === OrderSide.SELL}" 
-          (click)="setOrderSide(OrderSide.SELL)">
-          Sell
-        </button>
-      </div>
-      
-      <!-- Order form -->
-      <form [formGroup]="orderForm" (ngSubmit)="placeOrder()">
-        <div class="form-group">
-          <label>Price ({{ product?.quoteCurrency }})</label>
-          <input 
-            type="number" 
-            formControlName="price" 
-            placeholder="0.00" 
-            [disabled]="orderType === OrderType.MARKET"
+
+      <div class="form-group">
+        <label>Amount ({{ product?.baseCurrency }})</label>
+        <div class="input-with-button">
+          <input
+            type="number"
+            formControlName="amount"
+            placeholder="0.00000000"
             (input)="calculateTotal()">
+          <button type="button" class="max-button" (click)="setMaxAmount()">MAX</button>
         </div>
-        
-        <div class="form-group">
-          <label>Amount ({{ product?.baseCurrency }})</label>
-          <div class="input-with-button">
-            <input 
-              type="number" 
-              formControlName="amount" 
-              placeholder="0.00000000" 
-              (input)="calculateTotal()">
-            <button type="button" class="max-button" (click)="setMaxAmount()">MAX</button>
-          </div>
-          <div class="balance-info">
-            Available: {{ orderSide === OrderSide.BUY ? (userBalance.quote | number:'1.2-2') + ' ' + product?.quoteCurrency : (userBalance.base | number:'1.6-6') + ' ' + product?.baseCurrency }}
-          </div>
+        <div class="balance-info">
+          Available: {{ orderSide === OrderSide.BUY ? (userBalance.quote | number:'1.2-2') + ' ' + product?.quoteCurrency : (userBalance.base | number:'1.6-6') + ' ' + product?.baseCurrency }}
         </div>
-        
-        @if (orderType === OrderType.LIMIT) {
-          <div class="form-group">
-            <label>Total ({{ product?.quoteCurrency }})</label>
-            <input 
-              type="text" 
-              formControlName="total" 
-              placeholder="0.00" 
-              [disabled]="true">
-          </div>
-        }
-        
-        <button 
-          type="submit" 
-          class="submit-button" 
-          [ngClass]="{'buy': orderSide === OrderSide.BUY, 'sell': orderSide === OrderSide.SELL}" 
-          [disabled]="orderForm.invalid">
-          {{ orderSide === OrderSide.BUY ? 'Buy' : 'Sell' }} {{ product?.baseCurrency }}
-        </button>
-      </form>
-    </div>
-  }
+      </div>
+
+      <div class="form-group" *ngIf="orderType === OrderType.LIMIT">
+        <label>Total ({{ product?.quoteCurrency }})</label>
+        <input
+          type="text"
+          formControlName="total"
+          placeholder="0.00"
+          [disabled]="true">
+      </div>
+
+      <button
+        type="submit"
+        class="submit-button"
+        [ngClass]="{'buy': orderSide === OrderSide.BUY, 'sell': orderSide === OrderSide.SELL}"
+        [disabled]="orderForm.invalid">
+        {{ orderSide === OrderSide.BUY ? 'Buy' : 'Sell' }} {{ product?.baseCurrency }}
+      </button>
+    </form>
+  </div>
 </div>
