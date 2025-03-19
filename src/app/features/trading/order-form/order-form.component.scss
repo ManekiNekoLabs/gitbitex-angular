@@ -3,18 +3,11 @@
 .order-form {
   height: 100%;
   width: 100%;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   background-color: transparent;
   color: #fff;
-
-  // Custom scrollbar styles - hidden for order form
-  ::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
-  }
+  overflow-y: auto;
 
   .tabs {
     display: flex;
@@ -49,19 +42,7 @@
 
   .form-content {
     flex: 1;
-    overflow: hidden;
     padding: 0 15px;
-    
-    // Hide scrollbar completely
-    -ms-overflow-style: none;  // IE and Edge
-    scrollbar-width: none;     // Firefox
-    
-    // Hide scrollbar for Chrome, Safari and Opera
-    &::-webkit-scrollbar {
-      display: none;
-      width: 0;
-      height: 0;
-    }
   }
 
   .form-group {
@@ -373,4 +354,54 @@ form {
       }
     }
   }
+}
+
+/* Auth Buttons Container */
+.auth-buttons-container {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 10;
+}
+
+.auth-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 46px;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  
+  &.signup {
+    background-color: #f0b90b;
+    color: #1e2026; /* Dark text color */
+    
+    &:hover {
+      background-color: color.adjust(#f0b90b, $lightness: -5%);
+    }
+  }
+  
+  &.login {
+    background-color: #2b2f36; /* Dark background color */
+    color: #fff;
+    
+    &:hover {
+      background-color: #3a3f48;
+    }
+  }
+}
+
+.order-form-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
 }

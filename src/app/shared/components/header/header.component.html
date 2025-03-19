@@ -5,7 +5,7 @@
         <span class="logo-text">GitBitex</span>
       </a>
     </div>
-    
+
     <nav class="main-nav">
       <ul class="nav-links">
         <li><a routerLink="/trading" routerLinkActive="active">Trading</a></li>
@@ -13,7 +13,7 @@
         <li><a routerLink="/about" routerLinkActive="active">About</a></li>
       </ul>
     </nav>
-    
+
     <div class="auth-section">
       @if (currentUser$ | async; as user) {
         <div class="user-menu">
@@ -32,24 +32,24 @@
         </div>
       } @else {
         <div class="auth-buttons">
-          <a routerLink="/auth/login" class="login-btn">Login</a>
+          <a routerLink="/auth/login" class="login-btn">Log In</a>
           <a routerLink="/auth/signup" class="signup-btn">Sign Up</a>
         </div>
       }
     </div>
-    
+
     <button class="mobile-menu-btn" (click)="toggleMenu()">
       <span class="menu-icon">☰</span>
     </button>
   </div>
-  
+
   @if (isMenuOpen) {
     <div class="mobile-menu">
       <ul class="mobile-nav-links">
         <li><a routerLink="/trading" routerLinkActive="active">Trading</a></li>
         <li><a routerLink="/markets" routerLinkActive="active">Markets</a></li>
         <li><a routerLink="/about" routerLinkActive="active">About</a></li>
-        
+
         @if (!(currentUser$ | async)) {
           <li><a routerLink="/auth/login">Login</a></li>
           <li><a routerLink="/auth/signup">Sign Up</a></li>

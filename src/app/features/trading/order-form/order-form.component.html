@@ -92,5 +92,11 @@
         {{ orderSide === OrderSide.BUY ? 'Buy' : 'Sell' }} {{ product?.baseCurrency }}
       </button>
     </form>
+    
+    <!-- Auth Buttons - only visible when not authenticated -->
+    <div class="auth-buttons-container" *ngIf="!isAuthenticated">
+      <a routerLink="/auth/signup" class="auth-button signup">Sign Up</a>
+      <a routerLink="/auth/login" class="auth-button login">Log In</a>
+    </div>
   </div>
 </div>

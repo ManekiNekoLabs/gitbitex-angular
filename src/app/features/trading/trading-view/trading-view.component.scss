@@ -254,15 +254,25 @@ select {
 }
 
 .order-book-container,
-.trade-history-container,
-.order-form-container {
-  flex: 1;
+.trade-history-container {
+  flex: 4;
   background-color: #282c34;
   padding: 10px;
   overflow: hidden;
   border-right: 1px solid #3a3f4b;
   position: relative;
   height: calc(70vh - 80px); /* Increased from 50vh to 70vh */
+  max-height: calc(70vh - 80px);
+}
+
+.order-form-container {
+  flex: 5; /* 25% wider than the other components */
+  background-color: #282c34;
+  padding: 10px;
+  overflow: hidden;
+  border-right: 1px solid #3a3f4b;
+  position: relative;
+  height: calc(70vh - 80px);
   max-height: calc(70vh - 80px);
 }
 
@@ -314,11 +324,16 @@ h3 {
   }
   
   .order-book-container,
-  .trade-history-container,
-  .order-form-container {
+  .trade-history-container {
     height: auto;
     max-height: none;
     min-height: 300px; /* Increased from 250px to 300px */
+  }
+  
+  .order-form-container {
+    height: auto;
+    max-height: none;
+    min-height: 375px; /* 25% taller than the other components in responsive view */
   }
 }
 
