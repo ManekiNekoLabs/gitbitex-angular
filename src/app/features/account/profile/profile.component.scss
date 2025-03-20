@@ -1,0 +1,428 @@
+// Variables
+:root {
+  --primary-color: #f0b90b;
+  --primary-hover: #d9a800;
+  --secondary-color: #2b2f36;
+  --danger-color: #e53935;
+  --success-color: #4caf50;
+  --text-color: #1a1a1a;
+  --text-light: #6e6e6e;
+  --border-color: #e2e8f0;
+  --bg-color: #ffffff;
+  --bg-secondary: #f9fafb;
+}
+
+// Container
+.profile-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem;
+  color: var(--text-color);
+}
+
+// Page Header
+.page-header {
+  margin-bottom: 2rem;
+  
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .description {
+    color: var(--text-light);
+    font-size: 1rem;
+  }
+}
+
+// Loading Container
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  
+  .spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 3px solid rgba(240, 185, 11, 0.2);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+}
+
+// Messages
+.error-message, .success-message {
+  position: relative;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  
+  p {
+    margin: 0;
+    padding-right: 2rem;
+  }
+  
+  .close-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.error-message {
+  background-color: rgba(229, 57, 53, 0.1);
+  color: var(--danger-color);
+  border-left: 4px solid var(--danger-color);
+}
+
+.success-message {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: var(--success-color);
+  border-left: 4px solid var(--success-color);
+}
+
+// Profile Section
+.profile-section {
+  background-color: var(--bg-color);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .description {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+  }
+}
+
+// Form Styles
+.form-group {
+  margin-bottom: 1.25rem;
+  
+  label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+  
+  input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(240, 185, 11, 0.2);
+    }
+    
+    &:disabled, &[readonly] {
+      background-color: var(--bg-secondary);
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Button Styles
+.btn {
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  font-size: 0.875rem;
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.primary-btn {
+  background-color: var(--primary-color);
+  color: #1e2026;
+  
+  &:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+  }
+}
+
+.secondary-btn {
+  background-color: #e2e8f0;
+  color: #1a1a1a;
+  
+  &:hover:not(:disabled) {
+    background-color: #d2d8e0;
+  }
+}
+
+.danger-btn {
+  background-color: var(--danger-color);
+  color: white;
+  
+  &:hover:not(:disabled) {
+    background-color: darken(#e53935, 5%);
+  }
+}
+
+.copy-btn {
+  background-color: #e2e8f0;
+  color: #1a1a1a;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  
+  &:hover {
+    background-color: #d2d8e0;
+  }
+}
+
+// MFA Section Styles
+.mfa-section {
+  .mfa-description {
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+  
+  .mfa-status {
+    margin-bottom: 1.5rem;
+    
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      
+      &.enabled {
+        background-color: rgba(76, 175, 80, 0.1);
+        color: var(--success-color);
+      }
+      
+      &.disabled {
+        background-color: rgba(229, 57, 53, 0.1);
+        color: var(--danger-color);
+      }
+      
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+      }
+      
+      &.enabled .status-dot {
+        background-color: var(--success-color);
+      }
+      
+      &.disabled .status-dot {
+        background-color: var(--danger-color);
+      }
+    }
+  }
+}
+
+// MFA Setup Styles
+.mfa-setup-container {
+  margin-top: 1.5rem;
+  
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+  
+  .setup-steps {
+    margin-bottom: 2rem;
+    
+    .step {
+      display: flex;
+      margin-bottom: 2rem;
+      
+      .step-number {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        color: #1e2026;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 1rem;
+        flex-shrink: 0;
+      }
+      
+      .step-content {
+        flex-grow: 1;
+        
+        h4 {
+          font-size: 1rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+        }
+        
+        p {
+          color: var(--text-light);
+          margin-bottom: 1rem;
+          line-height: 1.5;
+        }
+      }
+    }
+  }
+  
+  .qr-container {
+    background-color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    display: inline-block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    .qr-code {
+      max-width: 200px;
+      height: auto;
+    }
+  }
+  
+  .secret-key-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    
+    .secret-key {
+      background-color: var(--bg-secondary);
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      font-family: monospace;
+      letter-spacing: 1px;
+      margin-right: 0.5rem;
+      flex-grow: 1;
+      border: 1px solid var(--border-color);
+      word-break: break-all;
+    }
+  }
+  
+  .verification-code-input {
+    input {
+      font-size: 1.25rem;
+      letter-spacing: 2px;
+      text-align: center;
+      font-family: monospace;
+      max-width: 200px;
+    }
+  }
+  
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+  }
+}
+
+// Backup Codes Styles
+.backup-codes-container {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  
+  h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  
+  .warning {
+    padding: 0.75rem;
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid #ffc107;
+    margin-bottom: 1.5rem;
+    color: #856404;
+    line-height: 1.5;
+  }
+  
+  .backup-codes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    
+    .backup-code {
+      font-family: monospace;
+      background-color: white;
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+      letter-spacing: 1px;
+    }
+  }
+  
+  .backup-codes-actions {
+    display: flex;
+    gap: 1rem;
+  }
+}
+
+// Manage MFA Styles
+.manage-mfa-container {
+  margin-top: 1.5rem;
+  
+  .mfa-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    
+    .mfa-option {
+      background-color: var(--bg-secondary);
+      padding: 1.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      
+      h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+      }
+      
+      p {
+        color: var(--text-light);
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
+      }
+    }
+  }
+}
+
+// Animation
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

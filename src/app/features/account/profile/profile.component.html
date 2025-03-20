@@ -1,1 +1,175 @@
-<p>profile works!</p>
+<div class="profile-container">
+  <div class="page-header">
+    <h1>Account Profile</h1>
+    <p class="description">Manage your account information and security settings</p>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">
+    <p>{{ error }}</p>
+    <button class="close-button" (click)="clearMessages()">×</button>
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="success-message">
+    <p>{{ successMessage }}</p>
+    <button class="close-button" (click)="clearMessages()">×</button>
+  </div>
+
+  <!-- User Profile Section -->
+  <div *ngIf="!loading && user" class="profile-section">
+    <h2>Profile Information</h2>
+    <form [formGroup]="profileForm">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" formControlName="email" readonly>
+      </div>
+
+      <div class="form-group">
+        <label for="name">Display Name</label>
+        <input type="text" id="name" formControlName="name">
+      </div>
+
+      <button type="submit" class="btn primary-btn" disabled>Update Profile</button>
+    </form>
+  </div>
+
+  <!-- MFA Section -->
+  <div *ngIf="!loading" class="profile-section mfa-section">
+    <h2>Two-Factor Authentication (2FA)</h2>
+    <p class="description">
+      Add an extra layer of security to your account by requiring both your password and an authentication code from your mobile device.
+    </p>
+
+    <!-- Current MFA Status -->
+    <div class="mfa-status">
+      <div class="status-indicator" [ngClass]="{'enabled': isTotpEnabled, 'disabled': !isTotpEnabled}">
+        <span class="status-dot"></span>
+        <span class="status-text">{{ isTotpEnabled ? 'Enabled' : 'Disabled' }}</span>
+      </div>
+    </div>
+
+    <!-- MFA Setup Process -->
+    <ng-container *ngIf="!isTotpEnabled && !setupInProgress">
+      <p class="mfa-description">
+        Using two-factor authentication adds an additional security layer to your account. 
+        Each time you sign in, you'll need your password and a verification code from your authenticator app.
+      </p>
+      <button class="btn primary-btn" (click)="setupTotp()">Enable Two-Factor Authentication</button>
+    </ng-container>
+
+    <!-- MFA Setup Steps -->
+    <div *ngIf="setupInProgress && totpSetupData" class="mfa-setup-container">
+      <h3>Setup Two-Factor Authentication</h3>
+      
+      <div class="setup-steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Scan QR Code</h4>
+            <p>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+            <div class="qr-container">
+              <img [src]="totpSetupData.qrCodeUrl" alt="QR Code" class="qr-code">
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Or Enter Secret Key Manually</h4>
+            <p>If you can't scan the QR code, enter this secret key in your authenticator app.</p>
+            <div class="secret-key-container">
+              <div class="secret-key">{{ totpSetupData.secretKey }}</div>
+              <button class="btn copy-btn" (click)="copySecretKey()">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Enter Verification Code</h4>
+            <p>Enter the 6-digit verification code from your authenticator app.</p>
+            <form [formGroup]="totpEnableForm" (ngSubmit)="enableTotp()">
+              <div class="form-group verification-code-input">
+                <input 
+                  type="text" 
+                  formControlName="verificationCode" 
+                  placeholder="000000" 
+                  maxlength="6"
+                  pattern="[0-9]*"
+                  inputmode="numeric"
+                  autocomplete="one-time-code">
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn secondary-btn" (click)="cancelSetup()">Cancel</button>
+                <button type="submit" class="btn primary-btn" [disabled]="totpEnableForm.invalid">Verify and Enable</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backup Codes Section -->
+      <div *ngIf="showBackupCodes" class="backup-codes-container">
+        <h4>Backup Codes</h4>
+        <p class="warning">
+          <strong>Important:</strong> Save these backup codes in a secure location. 
+          If you lose your authentication device, you can use these codes to access your account. Each code can only be used once.
+        </p>
+        <div class="backup-codes-grid">
+          <div *ngFor="let code of backupCodes" class="backup-code">{{ code }}</div>
+        </div>
+        <div class="backup-codes-actions">
+          <button class="btn copy-btn" (click)="copyBackupCodes()">Copy All Codes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Existing MFA -->
+    <div *ngIf="isTotpEnabled" class="manage-mfa-container">
+      <div class="mfa-options">
+        <div class="mfa-option">
+          <h4>Regenerate Backup Codes</h4>
+          <p>Generate a new set of backup codes. This will invalidate your previous backup codes.</p>
+          <button class="btn secondary-btn" (click)="regenerateBackupCodes()">Regenerate Backup Codes</button>
+        </div>
+
+        <div class="mfa-option">
+          <h4>Disable Two-Factor Authentication</h4>
+          <p>This will remove the extra security layer from your account. Not recommended.</p>
+          <form [formGroup]="totpDisableForm" (ngSubmit)="disableTotp()">
+            <div class="form-group">
+              <label>Enter your password to confirm</label>
+              <input type="password" formControlName="password" placeholder="Your current password">
+            </div>
+            <button type="submit" class="btn danger-btn" [disabled]="totpDisableForm.invalid">Disable 2FA</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Backup Codes Display -->
+      <div *ngIf="showBackupCodes" class="backup-codes-container">
+        <h4>New Backup Codes</h4>
+        <p class="warning">
+          <strong>Important:</strong> Save these backup codes in a secure location. 
+          If you lose your authentication device, you can use these codes to access your account. Each code can only be used once.
+        </p>
+        <div class="backup-codes-grid">
+          <div *ngFor="let code of backupCodes" class="backup-code">{{ code }}</div>
+        </div>
+        <div class="backup-codes-actions">
+          <button class="btn copy-btn" (click)="copyBackupCodes()">Copy All Codes</button>
+          <button class="btn secondary-btn" (click)="showBackupCodes = false">Hide Codes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

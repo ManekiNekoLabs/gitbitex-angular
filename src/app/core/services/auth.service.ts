@@ -53,14 +53,25 @@ export class AuthService {
     return !!this.tokenSubject.value;
   }
 
-  login(email: string, password: string): Observable<any> {
+  /**
+   * Login with email and password, optionally with MFA verification code
+   * @param email User's email
+   * @param password User's password
+   * @param code Optional verification code for MFA
+   * @returns Observable with authentication response
+   */
+  login(email: string, password: string, code?: string): Observable<any> {
     const headers = new HttpHeaders().set('Content-Type', 'application/json');
     
+    const loginData: any = { email, password };
+    
+    // Add verification code if provided
+    if (code) {
+      loginData.code = code;
+    }
+    
     // Use the correct endpoint from API docs: /api/users/accessToken
-    return this.http.post<TokenDto>(`${this.API_URL}/users/accessToken`, { 
-      email, 
-      password 
-    }, { headers })
+    return this.http.post<TokenDto>(`${this.API_URL}/users/accessToken`, loginData, { headers })
       .pipe(
         tap(response => {
           console.log('Login response:', response);
