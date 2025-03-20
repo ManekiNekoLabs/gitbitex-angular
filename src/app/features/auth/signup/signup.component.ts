@@ -27,8 +27,6 @@ export class SignupComponent {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8), this.passwordStrengthValidator]],
       confirmPassword: ['', [Validators.required]],
-      username: ['', [Validators.required, Validators.minLength(3)]],
-      country: ['', [Validators.required]],
       terms: [false, [Validators.requiredTrue]]
     }, { validators: this.passwordMatchValidator });
   }
@@ -71,9 +69,9 @@ export class SignupComponent {
       this.loading = true;
       this.error = '';
       
-      const { email, password, username, country } = this.signupForm.value;
+      const { email, password } = this.signupForm.value;
       
-      this.authService.signup(email, password, username, country).subscribe({
+      this.authService.signup(email, password, '', '').subscribe({
         next: (response) => {
           console.log('Signup successful:', response);
           this.loading = false;

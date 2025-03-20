@@ -11,6 +11,11 @@ interface AuthResponse {
   message?: string;
 }
 
+interface TokenDto {
+  token: string;
+  twoStepVerification?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -51,7 +56,11 @@ export class AuthService {
   login(email: string, password: string): Observable<any> {
     const headers = new HttpHeaders().set('Content-Type', 'application/json');
     
-    return this.http.post<AuthResponse>(`${this.API_URL}/login`, { email, password }, { headers })
+    // Use the correct endpoint from API docs: /api/users/accessToken
+    return this.http.post<TokenDto>(`${this.API_URL}/users/accessToken`, { 
+      email, 
+      password 
+    }, { headers })
       .pipe(
         tap(response => {
           console.log('Login response:', response);
@@ -60,9 +69,7 @@ export class AuthService {
               localStorage.setItem('token', response.token);
             }
             this.tokenSubject.next(response.token);
-            if (response.user) {
-              this.currentUserSubject.next(response.user);
-            }
+            this.loadCurrentUser().subscribe();
           }
         }),
         catchError(this.handleError)
@@ -72,11 +79,11 @@ export class AuthService {
   signup(email: string, password: string, username: string, country: string): Observable<any> {
     const headers = new HttpHeaders().set('Content-Type', 'application/json');
     
-    return this.http.post<AuthResponse>(`${this.API_URL}/signup`, { 
+    // Use the correct endpoint from API docs: /api/users
+    // Note: The API only accepts email and password, so we'll ignore username and country for now
+    return this.http.post<any>(`${this.API_URL}/users`, { 
       email, 
-      password, 
-      username, 
-      country 
+      password
     }, { headers })
       .pipe(
         tap(response => {
@@ -104,6 +111,18 @@ export class AuthService {
   }
 
   logout(): void {
+    // Use the correct endpoint for logout if user is authenticated
+    if (this.isAuthenticated) {
+      this.http.delete(`${this.API_URL}/users/accessToken`).subscribe({
+        next: () => this.clearAuthData(),
+        error: () => this.clearAuthData()
+      });
+    } else {
+      this.clearAuthData();
+    }
+  }
+
+  private clearAuthData(): void {
     if (this.isBrowser) {
       localStorage.removeItem('token');
     }
@@ -112,14 +131,19 @@ export class AuthService {
   }
 
   private loadCurrentUser(): Observable<any> {
-    return this.http.get<any>(`${this.API_URL}/user/me`)
-      .pipe(
-        tap(user => this.currentUserSubject.next(user)),
-        catchError(error => {
-          this.logout();
-          return throwError(() => error);
-        })
-      );
+    return this.http.get<any>(`${this.API_URL}/users/self`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      tap(user => {
+        console.log('Current user loaded:', user);
+        this.currentUserSubject.next(user);
+      }),
+      catchError(error => {
+        console.error('Error loading user:', error);
+        this.clearAuthData();
+        return throwError(() => error);
+      })
+    );
   }
 
   private handleError(error: HttpErrorResponse) {
