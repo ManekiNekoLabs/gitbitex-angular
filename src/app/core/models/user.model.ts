@@ -5,10 +5,12 @@ export interface User {
   name?: string;
   profilePhoto?: string;
   createdAt: Date | string;
-  updatedAt?: Date | string;
+  updatedAt?: string;
   twoStepVerificationType?: string; // Type of 2FA enabled (e.g., 'totp')
+  totpEnabled?: boolean; // Whether TOTP is enabled for this user (from API)
   isTotpEnabled?: boolean; // Whether TOTP is enabled for this user
   mfaEnabled?: boolean; // Whether MFA is enabled for this user
+  band?: boolean; // User ban status
 }
 
 export interface AuthResponse {

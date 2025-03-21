@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
@@ -6,6 +6,9 @@ import { TotpService, TotpSetupResponse } from '../../../core/services/totp.serv
 import { User } from '../../../core/models/user.model';
 import { catchError, finalize, of, tap } from 'rxjs';
 import { UserService } from '../../../core/services/user.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import * as QRCode from 'qrcode';
 
 @Component({
   selector: 'app-profile',
@@ -14,7 +17,7 @@ import { UserService } from '../../../core/services/user.service';
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
   user: User | null = null;
   
   // TOTP/MFA related properties
@@ -28,12 +31,14 @@ export class ProfileComponent implements OnInit {
   totpEnableForm: FormGroup;
   totpDisableForm: FormGroup;
   mfaForm: FormGroup;
+  passwordChangeForm: FormGroup;
   
   // UI states
   loading = false;
   setupInProgress = false;
   error = '';
   successMessage = '';
+  showPasswordChangeForm = false;
   
   // MFA states
   mfaSetupData: any = null;
@@ -41,11 +46,21 @@ export class ProfileComponent implements OnInit {
   mfaSetupStarted = false;
   mfaVerificationCompleted = false;
   
+  // Profile Picture
+  selectedProfilePicture: File | null = null;
+  profilePictureUrl: string | null = null;
+  
+  // Expose environment for template
+  environment = environment;
+  
+  private isComponentMounted = true;
+  
   constructor(
     private authService: AuthService,
     private totpService: TotpService,
     private fb: FormBuilder,
-    private userService: UserService
+    private userService: UserService,
+    private http: HttpClient
   ) {
     this.profileForm = this.fb.group({
       email: [{ value: '', disabled: true }],
@@ -63,10 +78,20 @@ export class ProfileComponent implements OnInit {
     this.mfaForm = this.fb.group({
       verificationCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]]
     });
+    
+    this.passwordChangeForm = this.fb.group({
+      currentPassword: ['', [Validators.required, Validators.minLength(6)]],
+      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      confirmPassword: ['', [Validators.required]]
+    }, { validators: this.passwordMatchValidator });
   }
   
   ngOnInit(): void {
     this.loadUserProfile();
+  }
+  
+  ngOnDestroy(): void {
+    this.isComponentMounted = false;
   }
   
   loadUserProfile() {
@@ -82,8 +107,23 @@ export class ProfileComponent implements OnInit {
             name: user.name || ''
           });
           
-          this.isTotpEnabled = user.twoStepVerificationType === 'totp';
-          this.mfaEnabled = user.mfaEnabled || false;
+          // Log the user object to debug
+          console.log('User profile loaded:', user);
+          
+          // Fix: Check totpEnabled property directly from API response
+          // The API returns totpEnabled instead of mfaEnabled and the twoStepVerificationType can be null
+          this.isTotpEnabled = user.totpEnabled === true || user.twoStepVerificationType === 'totp';
+          
+          // Log the status for debugging
+          console.log('2FA status (isTotpEnabled):', this.isTotpEnabled);
+          console.log('User properties:', {
+            totpEnabled: user.totpEnabled,
+            twoStepVerificationType: user.twoStepVerificationType
+          });
+          
+          // For backward compatibility
+          this.mfaEnabled = user.totpEnabled || false;
+          this.profilePictureUrl = user.profilePhoto || null;
         }
         this.loading = false;
       },
@@ -98,28 +138,24 @@ export class ProfileComponent implements OnInit {
   // MFA Setup Related Methods
   
   /**
-   * Start the TOTP setup process
+   * Set up TOTP (Time-based One-Time Password) for this user
    */
-  setupTotp() {
+  setupTotp(): void {
     this.setupInProgress = true;
-    this.loading = true;
     this.error = '';
     
-    this.totpService.setupTotp().pipe(
-      tap(response => {
+    this.totpService.setupTotp().subscribe({
+      next: (response: TotpSetupResponse) => {
         this.totpSetupData = response;
-        this.backupCodes = response.backupCodes;
-        this.showBackupCodes = true;
-      }),
-      catchError(error => {
-        console.error('Error setting up TOTP:', error);
-        this.error = error.message || 'Failed to setup two-factor authentication.';
-        return of(null);
-      }),
-      finalize(() => {
-        this.loading = false;
-      })
-    ).subscribe();
+        if (response.secretKey) {
+          this.generateQrCode(response.secretKey);
+        }
+      },
+      error: (error: any) => {
+        this.setupInProgress = false;
+        this.error = this.formatError(error);
+      }
+    });
   }
   
   /**
@@ -210,18 +246,90 @@ export class ProfileComponent implements OnInit {
    * Copy text to clipboard
    */
   copyToClipboard(text: string, successMessage: string = 'Copied to clipboard!'): void {
-    navigator.clipboard.writeText(text).then(
-      () => {
-        this.successMessage = successMessage;
-        setTimeout(() => {
-          this.successMessage = '';
-        }, 3000);
-      },
-      (err) => {
-        console.error('Could not copy text: ', err);
-        this.error = 'Failed to copy to clipboard.';
+    // Create a flag to track if the operation is still valid
+    let isOperationValid = true;
+    
+    // Set a timeout to ensure the operation doesn't hang
+    const timeoutId = setTimeout(() => {
+      isOperationValid = false;
+    }, 2000); // 2 seconds should be enough for clipboard operations
+    
+    try {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          // Clear the timeout as operation completed
+          clearTimeout(timeoutId);
+          
+          // Only update UI if the operation is still valid
+          if (isOperationValid) {
+            this.successMessage = successMessage;
+            setTimeout(() => {
+              if (this.successMessage === successMessage) {
+                this.successMessage = '';
+              }
+            }, 3000);
+          }
+        })
+        .catch((err) => {
+          // Clear the timeout as operation completed
+          clearTimeout(timeoutId);
+          
+          // Handle error only if operation is still valid
+          if (isOperationValid) {
+            console.error('Could not copy text: ', err);
+            this.error = 'Failed to copy to clipboard.';
+            
+            // Alternative method using document.execCommand (deprecated but works as fallback)
+            this.fallbackCopyTextToClipboard(text);
+          }
+        });
+    } catch (e) {
+      // Clear the timeout
+      clearTimeout(timeoutId);
+      
+      // Fallback for browsers that don't support clipboard API
+      if (isOperationValid) {
+        console.error('Clipboard API not supported, using fallback', e);
+        this.fallbackCopyTextToClipboard(text);
       }
-    );
+    }
+  }
+  
+  /**
+   * Fallback method to copy text to clipboard using execCommand
+   * @deprecated But useful as a fallback
+   */
+  private fallbackCopyTextToClipboard(text: string): void {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // Make the textarea out of viewport
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      if (successful) {
+        this.successMessage = 'Copied to clipboard!';
+        setTimeout(() => {
+          if (this.successMessage === 'Copied to clipboard!') {
+            this.successMessage = '';
+          }
+        }, 3000);
+      } else {
+        this.error = 'Unable to copy to clipboard';
+      }
+      
+      document.body.removeChild(textArea);
+    } catch (err) {
+      console.error('Fallback clipboard method failed:', err);
+      this.error = 'Failed to copy to clipboard.';
+    }
   }
   
   /**
@@ -367,5 +475,262 @@ export class ProfileComponent implements OnInit {
     this.mfaSetupStarted = false;
     this.mfaSetupData = null;
     this.mfaForm.reset();
+  }
+
+  // Password match validator
+  passwordMatchValidator(control: FormGroup): { [key: string]: boolean } | null {
+    const newPassword = control.get('newPassword');
+    const confirmPassword = control.get('confirmPassword');
+    
+    if (newPassword && confirmPassword && newPassword.value !== confirmPassword.value) {
+      return { 'passwordMismatch': true };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Update user profile (name/display name)
+   */
+  updateProfile(): void {
+    if (this.profileForm.invalid) {
+      return;
+    }
+    
+    this.loading = true;
+    this.error = '';
+    this.successMessage = '';
+    
+    const userData = {
+      name: this.profileForm.get('name')?.value
+    };
+    
+    this.userService.updateProfile(userData)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (response) => {
+          this.successMessage = 'Profile updated successfully';
+          this.loadUserProfile(); // Reload to get updated user data
+        },
+        error: (error) => {
+          this.error = error.message || 'Failed to update profile information';
+          console.error('Error updating profile:', error);
+        }
+      });
+  }
+  
+  /**
+   * Toggle password change form visibility
+   */
+  togglePasswordChangeForm(): void {
+    this.showPasswordChangeForm = !this.showPasswordChangeForm;
+    if (!this.showPasswordChangeForm) {
+      this.passwordChangeForm.reset();
+    }
+  }
+  
+  /**
+   * Submit password change
+   */
+  changePassword(): void {
+    if (this.passwordChangeForm.invalid) {
+      return;
+    }
+    
+    this.loading = true;
+    this.error = '';
+    this.successMessage = '';
+    
+    const passwordData = {
+      currentPassword: this.passwordChangeForm.get('currentPassword')?.value,
+      newPassword: this.passwordChangeForm.get('newPassword')?.value
+    };
+    
+    this.userService.changePassword(passwordData)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (response) => {
+          this.successMessage = 'Password changed successfully';
+          this.passwordChangeForm.reset();
+          this.showPasswordChangeForm = false;
+        },
+        error: (error) => {
+          this.error = error.message || 'Failed to change password. Please verify your current password.';
+          console.error('Error changing password:', error);
+        }
+      });
+  }
+  
+  /**
+   * Handle profile picture file selection 
+   */
+  onProfilePictureSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      
+      // Validate file is an image and size is reasonable
+      if (!file.type.startsWith('image/')) {
+        this.error = 'Please select an image file (JPG, PNG, etc.)';
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB max
+        this.error = 'Image size must be less than 5MB';
+        return;
+      }
+      
+      this.selectedProfilePicture = file;
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.profilePictureUrl = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+  
+  /**
+   * Upload the selected profile picture
+   */
+  uploadProfilePicture(): void {
+    if (!this.selectedProfilePicture) {
+      return;
+    }
+    
+    this.loading = true;
+    this.error = '';
+    this.successMessage = '';
+    
+    this.userService.uploadProfilePicture(this.selectedProfilePicture)
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (response) => {
+          this.successMessage = 'Profile picture updated successfully';
+          this.selectedProfilePicture = null;
+          this.loadUserProfile(); // Reload to get updated user data
+        },
+        error: (error) => {
+          this.error = error.message || 'Failed to upload profile picture';
+          console.error('Error uploading profile picture:', error);
+        }
+      });
+  }
+  
+  /**
+   * Set up Two-Factor Authentication (2FA) directly
+   * This is an alternative approach that can work with various backend configurations
+   */
+  setup2FA(): void {
+    this.setupInProgress = true;
+    this.loading = true;
+    this.error = '';
+    this.successMessage = '';
+    
+    // Define the URL for setting up TOTP
+    const setupUrl = `${environment.apiUrl}/users/totp/setup`;
+    
+    // Make a GET request to set up TOTP
+    this.http.get(setupUrl, {
+      headers: this.authService.getAuthHeaders()
+    })
+    .pipe(
+      finalize(() => {
+        this.loading = false;
+      })
+    )
+    .subscribe({
+      next: (response: any) => {
+        console.log('TOTP setup response:', response);
+        
+        // Map the response to the expected format
+        this.totpSetupData = {
+          secretKey: response.secretKey,
+          qrCodeUrl: response.qrCodeUri, // Map qrCodeUri to qrCodeUrl
+          backupCodes: response.backupCodes
+        };
+        
+        this.backupCodes = response.backupCodes || [];
+        this.showBackupCodes = true;
+        this.setupInProgress = true;
+        
+        // Generate QR code if we have a secret key
+        if (response.secretKey) {
+          this.generateQrCode(response.secretKey);
+        }
+      },
+      error: (error: any) => {
+        console.error('TOTP setup error:', error);
+        this.error = this.formatError(error);
+        this.setupInProgress = false;
+      }
+    });
+  }
+  
+  /**
+   * Generate QR code on the client side using the secretKey
+   */
+  private generateQrCode(secret: string): void {
+    if (!secret) {
+      return;
+    }
+    
+    // Constructing the otpauth URL - this is the standard format for TOTP
+    const userEmail = this.user?.email ?? 'user';
+    const issuer = 'GitBitex'; // Change this to your application name
+    const otpauthUrl = `otpauth://totp/${issuer}:${encodeURIComponent(userEmail)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`;
+    
+    // Set a timeout for the QR code generation (5 seconds should be more than enough)
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error('QR code generation timed out')), 5000);
+    });
+    
+    // Generate QR code as data URL with a timeout
+    Promise.race([
+      QRCode.toDataURL(otpauthUrl, { errorCorrectionLevel: 'H' }),
+      timeoutPromise
+    ])
+      .then(url => {
+        // Only update if component is still mounted
+        if (this.isComponentMounted) {
+          // Update the QR code URL with our generated one
+          if (this.totpSetupData) {
+            this.totpSetupData.qrCodeUrl = url;
+          }
+        }
+      })
+      .catch(err => {
+        if (this.isComponentMounted) {
+          console.error('Error generating QR code:', err);
+          
+          // Try a simpler version with fewer options as fallback
+          QRCode.toDataURL(otpauthUrl)
+            .then(url => {
+              if (this.isComponentMounted && this.totpSetupData) {
+                this.totpSetupData.qrCodeUrl = url;
+              }
+            })
+            .catch(fallbackErr => {
+              console.error('Fallback QR code generation also failed:', fallbackErr);
+            });
+        }
+      });
+  }
+
+  /**
+   * Format error messages for display
+   */
+  private formatError(error: any): string {
+    if (error.error && error.error.message) {
+      return error.error.message;
+    } else if (error.message) {
+      return error.message;
+    } else if (typeof error === 'string') {
+      return error;
+    } else {
+      return `Error: ${error.status} ${error.statusText || 'Unknown error'}`;
+    }
   }
 }

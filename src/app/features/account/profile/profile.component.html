@@ -25,7 +25,30 @@
   <!-- User Profile Section -->
   <div *ngIf="!loading && user" class="profile-section">
     <h2>Profile Information</h2>
-    <form [formGroup]="profileForm">
+    
+    <!-- Profile Picture -->
+    <div class="profile-picture-container">
+      <div class="profile-picture">
+        <img [src]="profilePictureUrl || 'assets/images/default-avatar.svg'" alt="Profile Picture">
+        <div class="profile-picture-overlay" (click)="fileInput.click()">
+          <span class="upload-icon">📷</span>
+          <span>Change</span>
+        </div>
+      </div>
+      <input 
+        #fileInput 
+        type="file" 
+        accept="image/*" 
+        style="display: none" 
+        (change)="onProfilePictureSelected($event)">
+      
+      <div *ngIf="selectedProfilePicture" class="upload-actions">
+        <button type="button" class="btn secondary-btn" (click)="selectedProfilePicture = null; profilePictureUrl = user?.profilePhoto || null">Cancel</button>
+        <button type="button" class="btn primary-btn" (click)="uploadProfilePicture()">Upload</button>
+      </div>
+    </div>
+    
+    <form [formGroup]="profileForm" (ngSubmit)="updateProfile()">
       <div class="form-group">
         <label for="email">Email Address</label>
         <input type="email" id="email" formControlName="email" readonly>
@@ -34,10 +57,58 @@
       <div class="form-group">
         <label for="name">Display Name</label>
         <input type="text" id="name" formControlName="name">
+        <div *ngIf="profileForm.get('name')?.invalid && profileForm.get('name')?.touched" class="error-text">
+          Display name is required
+        </div>
       </div>
 
-      <button type="submit" class="btn primary-btn" disabled>Update Profile</button>
+      <button type="submit" class="btn primary-btn" [disabled]="profileForm.invalid || loading">Update Profile</button>
     </form>
+    
+    <div class="divider"></div>
+    
+    <!-- Password Change Section -->
+    <div class="password-section">
+      <h3>Password</h3>
+      <p class="description">Update your password to keep your account secure.</p>
+      
+      <button *ngIf="!showPasswordChangeForm" type="button" class="btn secondary-btn" (click)="togglePasswordChangeForm()">
+        Change Password
+      </button>
+      
+      <form *ngIf="showPasswordChangeForm" [formGroup]="passwordChangeForm" (ngSubmit)="changePassword()" class="password-change-form">
+        <div class="form-group">
+          <label for="currentPassword">Current Password</label>
+          <input type="password" id="currentPassword" formControlName="currentPassword">
+          <div *ngIf="passwordChangeForm.get('currentPassword')?.invalid && passwordChangeForm.get('currentPassword')?.touched" class="error-text">
+            Current password is required
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input type="password" id="newPassword" formControlName="newPassword">
+          <div *ngIf="passwordChangeForm.get('newPassword')?.invalid && passwordChangeForm.get('newPassword')?.touched" class="error-text">
+            <span *ngIf="passwordChangeForm.get('newPassword')?.errors?.['required']">New password is required</span>
+            <span *ngIf="passwordChangeForm.get('newPassword')?.errors?.['minlength']">Password must be at least 6 characters</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmPassword">Confirm New Password</label>
+          <input type="password" id="confirmPassword" formControlName="confirmPassword">
+          <div *ngIf="passwordChangeForm.get('confirmPassword')?.touched" class="error-text">
+            <span *ngIf="passwordChangeForm.get('confirmPassword')?.errors?.['required']">Please confirm your password</span>
+            <span *ngIf="passwordChangeForm.errors?.['passwordMismatch']">Passwords do not match</span>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="btn secondary-btn" (click)="togglePasswordChangeForm()">Cancel</button>
+          <button type="submit" class="btn primary-btn" [disabled]="passwordChangeForm.invalid || loading">Change Password</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- MFA Section -->
@@ -55,14 +126,17 @@
       </div>
     </div>
 
-    <!-- MFA Setup Process -->
-    <ng-container *ngIf="!isTotpEnabled && !setupInProgress">
+    <!-- MFA Setup Process - Fix: Always show when not enabled and not in setup -->
+    <div *ngIf="!isTotpEnabled && !setupInProgress">
       <p class="mfa-description">
         Using two-factor authentication adds an additional security layer to your account. 
         Each time you sign in, you'll need your password and a verification code from your authenticator app.
       </p>
-      <button class="btn primary-btn" (click)="setupTotp()">Enable Two-Factor Authentication</button>
-    </ng-container>
+      <div class="mfa-buttons">
+        <button class="btn primary-btn" (click)="setupTotp()">Enable Two-Factor Authentication</button>
+        <button class="btn secondary-btn" (click)="setupTotpDirectly()">Setup 2FA Directly</button>
+      </div>
+    </div>
 
     <!-- MFA Setup Steps -->
     <div *ngIf="setupInProgress && totpSetupData" class="mfa-setup-container">
@@ -169,6 +243,29 @@
           <button class="btn copy-btn" (click)="copyBackupCodes()">Copy All Codes</button>
           <button class="btn secondary-btn" (click)="showBackupCodes = false">Hide Codes</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Security Section -->
+  <div class="security-section">
+    <div class="section-header">
+      <h3>Security Options</h3>
+      <p>Manage your account security settings</p>
+    </div>
+
+    <h4>Two-Factor Authentication (2FA)</h4>
+    <div class="option-row">
+      <div class="option-info">
+        <p>Add an extra layer of security to your account by enabling Two-Factor Authentication.</p>
+        <p class="status-label" [ngClass]="{'status-enabled': isTotpEnabled, 'status-disabled': !isTotpEnabled}">
+          {{ isTotpEnabled ? 'Enabled' : 'Disabled' }}
+        </p>
+      </div>
+      <div class="mfa-buttons">
+        <button *ngIf="!isTotpEnabled && !setupInProgress" (click)="setupTotp()" class="btn btn-primary">Enable 2FA</button>
+        <button *ngIf="!isTotpEnabled && !setupInProgress" (click)="setupTotpDirectly()" class="btn btn-secondary">Setup 2FA</button>
+        <button *ngIf="isTotpEnabled" (click)="disableTotp()" class="btn btn-danger">Disable 2FA</button>
       </div>
     </div>
   </div>
